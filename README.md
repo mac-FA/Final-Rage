@@ -24,8 +24,9 @@ Open `index.html` in any modern browser (or serve the folder: `python3 -m http.s
 | Spin special (costs a little HP) / **SUPER** when RAGE is full | L / C | B / RB | RAGE |
 | Pause · Mute | Enter · M | Start | II |
 
-Attack while dashing for a dash attack. Launched enemies can be juggled and bounce off the screen
-edge. Smash vending machines, noodle carts and golden busts for ramen and cash.
+Attack while dashing for a dash attack. Walk into a regular goon to grab them: attack for knee
+strikes, back + attack (or jump) to throw them into their friends. Launched enemies can be juggled
+and bounce off the screen edge. Smash vending machines, noodle carts and golden busts for ramen and cash.
 
 ## The cast
 

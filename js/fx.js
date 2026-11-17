@@ -20,7 +20,7 @@ const FX = {
     for (let i = 0; i < p.length; i++) {
       const o = p[i]; if (!!o.front !== !!front) continue;
       if (o.ent) { o.x = o.ent.x; o.y = o.ent.gy - o.ent.y - (o.ent.state === 'down' ? 50 : 136) * o.ent.scale; if (o.ent.remove) continue; }
-      const x = o.x - camX, y = o.y, t = o.life / o.max, a = 1 - t;
+      const x = o.scr ? o.x : o.x - camX, y = o.y, t = o.life / o.max, a = 1 - t;
       if (x < -200 || x > W + 200) continue;
       switch (o.k) {
         case 'spark': {
@@ -51,6 +51,19 @@ const FX = {
           ctx.fillStyle = o.col || '#efeaf8'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
           ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.45, 0, TAU); ctx.fill();
           break;
+        }
+        case 'stamp': { // a red approval seal, slammed onto the screen
+          const age = o.max - o.life, sc = age < 7 ? 3.2 - 2.2 * EASE.o(age / 7) : 1, w = o.s.length * 50 + 34;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(-0.2); ctx.scale(sc, sc); ctx.globalAlpha = Math.min(1, o.life / 12, age / 3);
+          ctx.fillStyle = 'rgba(255,250,240,0.93)'; rrect(ctx, -w / 2, -40, w, 80, 10);
+          ctx.strokeStyle = '#d8102e'; ctx.lineWidth = 7; ctx.strokeRect(-w / 2 + 5, -35, w - 10, 70); ctx.lineWidth = 2; ctx.strokeRect(-w / 2 + 13, -27, w - 26, 54);
+          txt(ctx, o.s, 0, 2, 46, '#d8102e', { ol: 0, skew: 0, font: JFONT }); if (o.sub) txt(ctx, o.sub, 0, 54, 13, '#fff', { ol: 4, skew: 0 });
+          ctx.restore(); break;
+        }
+        case 'crack': {
+          ctx.save(); ctx.globalAlpha = Math.min(1, t * 2.5); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          for (let pass = 0; pass < 2; pass++) { ctx.strokeStyle = pass ? '#fff' : INK; ctx.lineWidth = pass ? 2.2 : 6; ctx.beginPath(); for (const br of o.br) { ctx.moveTo(x, y); for (const q of br) ctx.lineTo(x + q[0], y + q[1]); } ctx.stroke(); }
+          ctx.restore(); break;
         }
         case 'bubble': {
           ctx.save(); ctx.globalAlpha = Math.min(1, t * 6, a * 10); ctx.font = '700 12px "Trebuchet MS", "Comic Sans MS", sans-serif';
@@ -131,6 +144,10 @@ function hitSpark(x, y, heavy, col) {
   if (heavy) { FX.add({ k: 'burst', x, y, size: 120, col: col || '#ff7a1a', life: 12 }); FX.add({ k: 'ring', x, y, size: 110, flat: 1, life: 12, w: 8, col: '#fff' }); }
   const n = heavy ? 16 : 7;
   for (let i = 0; i < n; i++) { const a = rand(TAU), v = rand(5, heavy ? 19 : 11); FX.add({ k: 'streak', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.86, size: heavy ? 4 : 3, col: i % 2 ? '#fff' : (col || '#ffd31a'), life: rand(8, 16) | 0, len: 2.2 }); }
+}
+function wallCrack(x, y, dir) {
+  const br = []; for (let i = 0; i < 7; i++) { const a = (i / 6 - 0.5) * 2.6, pts = []; let px = 0, py = 0; for (let k = 0; k < 3; k++) { const l = rand(18, 46); px += Math.cos(a + rand(-0.5, 0.5)) * l * dir; py += Math.sin(a + rand(-0.5, 0.5)) * l; pts.push([px, py]); } br.push(pts); }
+  FX.add({ k: 'crack', x, y, br, life: 40, front: 1 });
 }
 function hitText(x, y, heavy) {
   const s = pick(heavy ? KATA_H : KATA_L);

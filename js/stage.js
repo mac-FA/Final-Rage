@@ -152,6 +152,16 @@ const Scenery = [
       ctx.strokeStyle = '#cfe6ff55'; ctx.lineWidth = 1.2; ctx.beginPath(); const r = RNG(9);
       for (let i = 0; i < 90; i++) { const x = ((r() * 1200 - t * 5 - cam * 1.2) % 1200 + 1200) % 1200 - 100, y = (r() * 700 + t * (16 + r() * 8)) % 700 - 80; ctx.moveTo(x, y); ctx.lineTo(x - 7, y + 26); }
       ctx.stroke();
+      // out-of-focus street furniture sliding past the lens
+      for (let i = 0; i < 2; i++) {
+        const x = ((i * 1250 + 500 - cam * 1.5) % 2500 + 2500) % 2500 - 300; if (x < -160 || x > W + 160) continue;
+        ctx.fillStyle = 'rgba(6,2,16,0.93)'; ctx.fillRect(x - 7, 0, 14, H); ctx.fillRect(x - 70, 30, 140, 74);
+        ctx.strokeStyle = i ? '#05d9e8' : '#ff2a6d'; ctx.lineWidth = 3; ctx.strokeRect(x - 64, 36, 128, 62);
+        txt(ctx, i ? 'FUN ZONE →' : 'NO FUN', x, 60, 22, i ? '#05d9e8' : '#ff2a6d', { skew: 0, ol: 0, glow: i ? '#05d9e8' : '#ff2a6d' }); txt(ctx, i ? '(permit required)' : 'BY ORDER OF G.', x, 84, 11, '#fff', { skew: 0, ol: 0 });
+      }
+      ctx.strokeStyle = 'rgba(6,2,16,0.9)'; ctx.lineWidth = 3; ctx.beginPath();
+      for (let k = -1; k < 3; k++) { const x0 = k * 700 - ((cam * 1.5) % 700); ctx.moveTo(x0, -6); ctx.quadraticCurveTo(x0 + 350, 44, x0 + 700, -6); }
+      ctx.stroke();
     }
   },
   /* ================= STAGE 2 : MIDNIGHT NOODLE MARKET ================= */

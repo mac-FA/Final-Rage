@@ -3,8 +3,8 @@ for (const k in MOVES) { MOVES[k].len = keysLen(MOVES[k].k); MOVES[k].name = k; 
 const und = (v, d) => v === undefined ? d : v;
 
 class Fighter {
-  constructor(def, x, z, team) {
-    this.def = def; this.st = def.style; this.x = x; this.z = z; this.y = 0; this.vx = 0; this.vz = 0; this.vy = 0;
+  constructor(def, x, z, team, style) {
+    this.def = def; this.st = style || def.style; this.x = x; this.z = z; this.y = 0; this.vx = 0; this.vz = 0; this.vy = 0;
     this.facing = 1; this.team = team; this.hp = this.maxhp = def.hp; this.dhp = def.hp;
     this.state = 'idle'; this.idleName = def.idle || 'idle'; this.runName = def.run || 'run';
     this.anim = this.idleName; this.af = 0; this.pose = mixPose(POSES.idle, POSES.idle, 1, {}); this.from = mixPose(POSES.idle, POSES.idle, 1, {}); this._tmp = {};
@@ -92,7 +92,7 @@ class Fighter {
         if (Math.abs(this.vx) > 6 && this.t % 3 === 0) this.addGhost(8, '#fff');
         { const sx = this.x - G.camX;
           if (this.entered && ((sx > W - 14 && this.vx > 1.5) || (sx < 14 && this.vx < -1.5))) {
-            this.vx *= -0.55; hitSpark(this.x, this.gy - this.y - 50, false, '#fff'); G.shake = Math.max(G.shake, 9); Sfx.play('hit2'); this.spinV *= -1;
+            this.vx *= -0.55; hitSpark(this.x, this.gy - this.y - 50, false, '#fff'); wallCrack(this.x + Math.sign(sx - W / 2) * 10, this.gy - this.y - 50, -Math.sign(sx - W / 2)); G.shake = Math.max(G.shake, 9); Sfx.play('hit2'); this.spinV *= -1;
             FX.add({ k: 'text', s: 'ガン!', x: this.x - Math.sign(sx - W / 2) * 30, y: this.gy - this.y - 80, size: 30, life: 26, rot0: rand(-0.3, 0.3), font: JFONT, front: 1 });
           } }
         break;
@@ -275,6 +275,7 @@ class Fighter {
     if (this.inv > 0 && this.state !== 'super' && (G.t >> 1) & 1 && this.isPlayer) ctx.globalAlpha = 0.45;
     let jx = 0;
     if (G.hitstop > 0 && this.flash > 0) { jx = ((G.t & 1) ? 4 : -4); ctx.save(); ctx.translate(jx, 0); }
+    if (this.isPlayer && this.rage >= 100 && this.state !== 'super') { ctx.save(); ctx.globalAlpha = 0.5 + 0.3 * Math.sin(G.t * 0.4); for (const o of [[-3.5, 0], [3.5, 0], [0, -4.5]]) { ctx.save(); ctx.translate(o[0], o[1]); drawFighter(ctx, this.st, J, (G.t >> 2) & 1 ? this.def.col : '#fff'); ctx.restore(); } ctx.restore(); }
     if (G.rim && this.flash <= 2) { ctx.save(); ctx.translate(-2.6, -2.2); drawFighter(ctx, this.st, J, G.rim); ctx.restore(); } // back-light
     if (this.smear) { const sm = this.smear; ctx.globalAlpha = 0.9; limb(ctx, [sm.a, sm.b], [sm.w * 0.3, sm.w], [sm.col], INK, 2); ctx.fillStyle = '#fff'; capsule(ctx, sm.a, sm.b, sm.w * 0.1, sm.w * 0.5); ctx.globalAlpha = 1; }
     for (let i = 0; i < this.chains.length; i++) {
@@ -306,9 +307,10 @@ class Player extends Fighter {
   control() {
     const I = Input, grounded = this.y <= 0 && this.state !== 'jump';
     const mx = (I.held.right ? 1 : 0) - (I.held.left ? 1 : 0), mz = (I.held.down ? 1 : 0) - (I.held.up ? 1 : 0);
-    if (I.hit.left || I.hit.right) { const d = I.hit.right ? 1 : -1; if (this.tapDir === d && this.t - this.tapT < 16) { this.running = true; Sfx.play('dash'); dustPuff(this.x, this.gy, 5, 3); } this.tapDir = d; this.tapT = this.t; }
+    if (I.hit.left || I.hit.right) { const d = I.hit.right ? 1 : -1; if (this.tapDir === d && this.t - this.tapT < 16) { this.running = true; Sfx.play('dash'); dustPuff(this.x, this.gy, 5, 3); FX.add({ k: 'ring', x: this.x, y: this.gy - 56 * this.scale, size: 54, flat: 1.7, life: 11, w: 5 }); } this.tapDir = d; this.tapT = this.t; }
     if (I.run && mx) this.running = true; if (!mx) this.running = false;
     if (G.auto) return;
+    if (mx || mz || I.hit.atk || I.hit.jump || I.hit.spc || !grounded) this.idleT = 0;
     if (I.hit.spc && (this.rage >= 100 || grounded)) return this.special();
     if (grounded) {
       this.airUsed = false;
@@ -318,7 +320,12 @@ class Player extends Fighter {
       const sp = this.def.speed * (this.running ? 1.9 : 1);
       this.vx = mx * sp; this.vz = mz * this.def.speed * 0.68; if (mx) this.facing = mx;
       if (mx || mz) { this.state = this.running ? 'run' : 'walk'; this.setAnim(this.running ? this.runName : 'walk', 4); if (this.running && this.t % 4 === 0) { this.addGhost(10); dustPuff(this.x - this.facing * 10, this.gy, 1, 1); } }
-      else { this.state = 'idle'; this.setAnim(this.idleName, 5); }
+      else {
+        this.state = 'idle'; this.idleT = (this.idleT || 0) + 1;
+        if (this.idleT < 400) this.setAnim(this.idleName, 5);
+        else if (this.idleT === 400) { this.setAnim(this.def.win, 10); FX.add({ k: 'bubble', ent: this, s: pick(['…hello?', 'any day now.', 'is it my turn again?', 'I could do this all night']), x: this.x, y: 0, life: 110, front: 1 }); }
+        else if (this.idleT > 640) this.idleT = 0;
+      }
     } else {
       this.vx = clamp(this.vx + mx * 0.22, -this.def.speed * 1.8, this.def.speed * 1.8); this.vz = mz * this.def.speed * 0.4;
       if (I.hit.atk && !this.airUsed) { this.airUsed = true; if (mx) this.facing = mx; this.startMove(this.def.airAtk); }
@@ -418,6 +425,7 @@ class Player extends Fighter {
           this.setAnim('upper', 1); this.vy = 9; this.y = 0.01; this.vx = f * 3; G.zoomT = 1;
           for (const e of G.enemies()) if (this.inFront(e, -30, 200, 56)) e.takeHit(this, { dmg: 46, kx: 4.5, ky: 15, stop: 20, heavy: 1, pierce: 1, y: [50, 120] });
           G.invert = 5; G.shake = 30; Sfx.play('boom'); FX.add({ k: 'ring', x: this.x + f * 50, y: gy, size: 240, life: 22, w: 12, col: '#ffd31a' });
+          FX.add({ k: 'stamp', s: '配達済', sub: 'DELIVERED', scr: 1, x: 300, y: 170, life: 80, front: 1 });
           FX.add({ k: 'text', s: 'お届け完了!!', x: this.x + f * 60, y: gy - 230, vy: -0.4, size: 40, life: 60, rot0: -0.1, font: JFONT, front: 1 });
         } else if (t > 104 && this.y <= 0) this.endSuper();
         return true;
@@ -441,6 +449,7 @@ class Player extends Fighter {
         } else if (t === 82) {
           for (const e of s.marked) if (e.alive) { e.inv = 0; if (e.state === 'down' || e.state === 'getup') e.state = 'hurt'; e.takeHit(this, { dmg: 44, kx: rand(3, 6), ky: rand(11, 15), stop: 20, heavy: 1, pierce: 1, both: 1, y: [50, 100] }); FX.add({ k: 'burst', x: e.x, y: e.gy - 60, size: 190, col: '#ff4fa3', life: 20, front: 1 }); }
           G.invert = 5; G.shake = 30; Sfx.play('boom');
+          FX.add({ k: 'stamp', s: '完売', sub: 'SOLD OUT', scr: 1, x: 300, y: 170, life: 80, front: 1 });
           FX.add({ k: 'text', s: 'アンコール!!', x: this.x, y: gy - 200, vy: -0.4, size: 44, life: 60, rot0: -0.1, font: JFONT, front: 1 });
         } else if (t > 108) this.endSuper();
         return false;
@@ -467,6 +476,7 @@ class Player extends Fighter {
           FX.add({ k: 'burst', x: this.x, y: this.gy - 30, size: 330, col: '#ff7a1a', life: 24, front: 1 });
           debris(this.x, this.gy, ['#555', '#888', '#333', '#ff9a1a'], 26); dustPuff(this.x, this.gy, 26, 9);
           G.invert = 6; G.shake = 38; Sfx.play('boom');
+          FX.add({ k: 'stamp', s: '完食', sub: 'WELL DONE', scr: 1, x: 300, y: 170, life: 80, front: 1 });
           FX.add({ k: 'text', s: 'ドッカーン!!', x: this.x, y: this.gy - 210, vy: -0.4, size: 52, life: 64, rot0: -0.1, font: JFONT, front: 1 });
         }
         if (t > 74) this.endSuper();
@@ -484,10 +494,28 @@ class Player extends Fighter {
 }
 
 /* =============================== ENEMY =============================== */
+const VARIANTS = {
+  punk: [{}, { hair: '#ffd31a', accent: '#ffd31a' }, { hair: '#05d9e8', accent: '#05d9e8', pants: '#5a3b7a' }, { hair: '#ff8a1a', accent: '#ff8a1a', top: '#3a2a2a', skin: '#c98a5e' }],
+  punk2: [{}, { hair: '#b967ff', accent: '#b967ff', top: '#2a1050' }, { hair: '#fff', accent: '#ff2a6d', skin: '#e8b48a' }],
+  suit: [{}, { top: '#5a4a3a', pants: '#463a2e', accent: '#2b6ad9' }, { top: '#2e4a3e', pants: '#243a30', accent: '#ffd31a', hair: '#6a4a2a' }],
+  pigeon: [{}, { pants: '#1aa8a0' }, { pants: '#d92b6a', skin: '#b8b0a0', top: '#a8a090' }],
+  bouncer: [{}, { top: '#3a1030', pants: '#3a1030' }]
+}, _varCache = {};
+function variantStyle(type) { // same goon, different laundry
+  const v = VARIANTS[type]; if (!v) return ENEMIES[type].style;
+  const i = (Math.random() * v.length) | 0, k = type + i;
+  return _varCache[k] || (_varCache[k] = i ? mkStyle(Object.assign({}, ENEMIES[type].style.raw, v[i])) : ENEMIES[type].style);
+}
 class Enemy extends Fighter {
   constructor(type, x, z) {
-    super(ENEMIES[type], x, z, 1); this.type = type; this.cd = rand(30, 90); this.aiT = 0; this.mode = 'hover'; this.side = 1; this.hOff = 0; this.hDist = 180;
+    super(ENEMIES[type], x, z, 1, variantStyle(type)); this.type = type; this.cd = rand(30, 90); this.aiT = 0; this.mode = 'hover'; this.side = 1; this.hOff = 0; this.hDist = 180;
     this.facing = -1;
+  }
+  startMove(name) { // telegraph: a glint in the eye and a "!"
+    super.startMove(name);
+    if (name === 'roar') return;
+    FX.add({ k: 'text', s: '!', x: this.x + this.facing * 8, y: this.gy - this.y - 152 * this.scale, vy: -0.6, size: 30, life: 20, rot0: 0, col: '#ff3a3a', front: 1 });
+    FX.add({ k: 'star', x: this.J.head[0] + this.facing * 6, y: this.J.head[1] - 2, size: 30, life: 14, col: '#fff', front: 1 });
   }
   control() {
     const p = G.player, d = this.def;

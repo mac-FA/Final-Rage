@@ -48,7 +48,7 @@ const G = {
     const p = this.player; p.x = -40; p.z = 100; p.y = 0; p.vx = p.vy = p.vz = 0; p.hp = p.maxhp; p.dhp = p.hp; p.state = 'walk'; p.move = null; p.anim = null; p.setAnim('walk', 0); p.facing = 1; p.inv = 0; p.sup = null; p.ghosts = []; p.trail = [];
     this.rim = ['#ff5ad0', '#ffc070', '#b8d4ff'][i]; this.blur = 0;
     this.maxAtk = 2 + (i > 0 ? 1 : 0); this.combo = 0; this.hitstop = 0; this.slow = 0; this.zoomT = 1; this.card = null; this.ban = null;
-    this.auto = true; this.setState('intro'); Music.start(TUNES[sd.tune]);
+    this.auto = true; this.setState('intro'); Music.start(TUNES[sd.tune]); this.wipe = 34;
   },
   spawn(type, side, z) {
     const e = new Enemy(type, 0, z);
@@ -78,6 +78,7 @@ const G = {
     Input.tick(); this.t++; this.st++;
     if (this.shake > 0) this.shake *= 0.86; if (this.shake < 0.4) this.shake = 0;
     if (this.invert > 0) this.invert--; if (this.flash > 0) this.flash -= 0.08;
+    if (this.wipe > 0) this.wipe--;
     this.zoom += (this.zoomT - this.zoom) * 0.14; if (this.blur > 0) this.blur--;
     if (this.comboPop > 0) this.comboPop -= 0.1;
     switch (this.state) {
@@ -104,7 +105,7 @@ const G = {
       case 'clear': {
         this.world();
         const p = this.player; if (p.y <= 0 && p.state !== 'win' && p.state !== 'super' && p.state !== 'attack') { p.state = 'win'; p.move = null; p.anim = null; p.setAnim(p.def.win, 8); }
-        if (this.st > 330 || (this.st > 120 && Input.any())) { if (this.stageI + 1 < STAGE_DATA.length) this.startStage(this.stageI + 1); else { this.setState('ending'); Music.start(TUNES.title); this.saveHi(); } }
+        if (this.st > 330 || (this.st > 120 && Input.any())) { if (this.stageI + 1 < STAGE_DATA.length) this.startStage(this.stageI + 1); else { this.setState('ending'); FX.clear(); Music.start(TUNES.title); this.saveHi(); } }
         break;
       }
       case 'over':
@@ -164,6 +165,7 @@ const G = {
       case 'ending': this.drawEnding(); break;
       default: this.drawWorld(); this.drawHUD();
     }
+    if (this.wipe > 0) { const k = EASE.i(this.wipe / 34); ctx.fillStyle = '#07040d'; for (let i = -1; i < 9; i++) { para(ctx, i * 124 + 124 * (1 - k) / 2, -2, 124 * k + 1.5, H + 4, 70); ctx.fill(); } } // slatted wipe
     if (this.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${clamp(this.flash, 0, 1)})`; ctx.fillRect(0, 0, W, H); }
     if (Sfx.muted) txt(ctx, 'MUTED [M]', W - 10, H - 10, 11, '#fff8', { align: 'right', skew: 0, ol: 2 });
   },
@@ -203,6 +205,10 @@ const G = {
     // vignette
     if (!this.vig) { this.vig = ctx.createRadialGradient(W / 2, H / 2, 260, W / 2, H / 2, 620); this.vig.addColorStop(0, 'rgba(0,0,0,0)'); this.vig.addColorStop(1, 'rgba(4,0,14,0.38)'); }
     ctx.fillStyle = this.vig; ctx.fillRect(0, 0, W, H);
+    if (p.hp > 0 && p.hp / p.maxhp < 0.28) { // danger: the edges of the screen throb red
+      if (!this.vigR) { this.vigR = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 560); this.vigR.addColorStop(0, 'rgba(255,0,40,0)'); this.vigR.addColorStop(1, 'rgba(255,0,40,1)'); }
+      ctx.globalAlpha = 0.22 + 0.16 * Math.sin(t * 0.18); ctx.fillStyle = this.vigR; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+    }
     if (sa > 0.02) { ctx.fillStyle = '#05010c'; ctx.fillRect(0, 0, W, 30 * sa); ctx.fillRect(0, H - 30 * sa, W, 30 * sa); } // cinematic bars
     if (this.cutin) this.drawCutin();
   },
@@ -309,8 +315,14 @@ const G = {
     }
     if (this.card) this.drawBossCard();
     if (this.state === 'intro') this.drawStageCard();
+    if (this.state === 'clear' && this.st > 150) {
+      const pts = Math.min(this.bestCombo, 40) / 40 * 50 + p.hp / p.maxhp * 30 + this.lives * 10, rk = pts >= 75 ? ['S', 'SUSPICIOUSLY GOOD', '#ffd31a'] : pts >= 55 ? ['A', 'ABSOLUTELY RUDE', '#ff4fa3'] : pts >= 35 ? ['B', 'BASICALLY HEROIC', '#05d9e8'] : ['C', 'COULD PUNCH HARDER', '#fff'];
+      const pop = 1 + Math.max(0, 1 - (this.st - 150) / 8) * 2;
+      txt(ctx, rk[0], W / 2 - 190, 444, 110, [' #fff', rk[2]].map(c => c.trim()), { ol: 14, sc: pop, rot: -0.1 }); txt(ctx, 'RANK', W / 2 - 190, 378, 16, '#fff', { ol: 4 });
+      txt(ctx, rk[1], W / 2 + 70, 446, 30, rk[2], { ol: 7 });
+    }
     if (this.state === 'clear' && this.st > 80) {
-      const y = 352; txt(ctx, `KOs  ${this.kills}     BEST COMBO  ${this.bestCombo}     SCORE  ${this.score}`, W / 2, y, 20, '#fff', { ol: 5 });
+      const y = 330; txt(ctx, `KOs  ${this.kills}     BEST COMBO  ${this.bestCombo}     SCORE  ${this.score}`, W / 2, y, 20, '#fff', { ol: 5 });
     }
     if (this.state === 'over') {
       ctx.fillStyle = 'rgba(10,0,10,0.7)'; ctx.fillRect(0, 0, W, H);
@@ -412,8 +424,9 @@ const G = {
       ctx.save(); ctx.clip(); if (sel) { streakField(ctx, t + i * 50, 0.3, [h.col, '#fff'], 40); speedLines(ctx, x + w / 2 + 12, 250, t, 0.14, '#fff', 120); }
       const cx = x + w / 2 + 10, gy = 372;
       ctx.fillStyle = 'rgba(8,4,20,0.5)'; ctx.beginPath(); ctx.ellipse(cx, gy, 56, 11, 0, 0, TAU); ctx.fill();
-      if (sel) { dm[i].draw(ctx, cx - 12, gy, h.win, 0, 1, h.col, 0.5); }
-      dm[i].draw(ctx, cx, gy, sel ? h.win : h.idle, t, 1);
+      const an = sel ? h.flex[((this.st / 80) | 0) % h.flex.length] : h.idle;
+      if (sel) { halftone(ctx, x, 78, w + 26, 380, 'rgba(255,255,255,0.1)', 1, t); dm[i].draw(ctx, cx - 12, gy, an, 0, 1, h.col, 0.5); }
+      dm[i].draw(ctx, cx, gy, an, t, 1);
       if (!sel) { ctx.fillStyle = 'rgba(14,6,30,0.6)'; ctx.fillRect(x - 10, 70, w + 60, 400); }
       ctx.restore();
       ctx.globalAlpha = sel ? 1 : 0.6;
@@ -429,12 +442,22 @@ const G = {
     if ((t >> 4) & 1) { txt(ctx, '◀', 22, 260, 30, '#fff', { skew: 0, ol: 5 }); txt(ctx, '▶', W - 22, 260, 30, '#fff', { skew: 0, ol: 5 }); }
   },
   drawEnding() {
-    const t = this.st; this.menuBg(0.8); speedLines(ctx, W / 2, 200, this.t, 0.12, '#ffd31a', 240);
-    const dm = this.dummies(); dm[this.heroI].draw(ctx, W / 2, 510, HEROES[this.heroI].win, 0, 1);
-    txt(ctx, 'FUN IS FREE AGAIN!', W / 2, 90, 80, '#ffd31a', { ol: 14, sc: 1 + Math.max(0, 1 - t / 14) });
+    const t = this.st, T = this.t;
+    if (!this.built[2]) { Scenery[2].build(); this.built[2] = 1; }
+    Scenery[2].draw(ctx, 520, T); Scenery[2].glow(ctx, 520, T);
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(10,2,26,0.55)'); g.addColorStop(0.6, 'rgba(10,2,26,0.1)'); g.addColorStop(1, 'rgba(10,2,26,0.5)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // the former chairman, now a celestial body
+    const sx = 800 + Math.sin(T * 0.01) * 6, sy = 60, r = 16 + 8 * Math.abs(Math.sin(T * 0.07));
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(T * 0.02); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffe14a'; ctx.beginPath(); for (let j = 0; j < 8; j++) { const rr = j % 2 ? r * 0.14 : r, an = j / 8 * TAU; ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } ctx.fill(); ctx.restore();
+    txt(ctx, '← former chairman', sx - 22, sy + 2, 12, '#ffe14a', { align: 'right', ol: 3, skew: 0 });
+    const dm = this.dummies(), gy = 512, order = [this.heroI, (this.heroI + 1) % 3, (this.heroI + 2) % 3], xs = [W / 2, W / 2 - 250, W / 2 + 250];
+    [1, 2, 0].forEach(k => { const i = order[k], h = HEROES[i], f = k === 2 ? -1 : 1; ctx.fillStyle = 'rgba(8,4,20,0.5)'; ctx.beginPath(); ctx.ellipse(xs[k], gy, 56, 11, 0, 0, TAU); ctx.fill(); dm[i].draw(ctx, xs[k], gy, k ? h.flex[(((T + k * 50) / 120) | 0) % h.flex.length] : h.win, 0, f); });
+    if (T % 9 === 0) FX.add({ k: 'bill', x: rand(W), y: -10, vy: rand(1, 2.5), vx: rand(-1, 1), size: 9, col: pick(['#ff4fa3', '#ffd31a', '#05d9e8', '#7dff6b']), life: 300, ph: rand(6), scr: 1, front: 1 });
+    FX.update(); FX.draw(ctx, 0, true);
+    txt(ctx, 'FUN IS FREE AGAIN!', W / 2, 84, 78, ['#fff6b0', '#ffd31a', '#ff5a1a'], { ol: 14, sc: 1 + Math.max(0, 1 - t / 14), stroke: INK });
     const L = ['Chairman Goldfist was launched into low orbit, where laughing is still technically legal.', 'The trademark on "FUN" expired the moment he left the atmosphere.', `FINAL SCORE  ${this.score}      KOs  ${this.kills}      BEST COMBO  ${this.bestCombo}`, 'No pigeons were harmed. El Palomo is a man in a mask. Probably.'];
-    L.forEach((s, i) => { if (t > 40 + i * 50) txt(ctx, s, W / 2, 160 + i * 30, i === 2 ? 22 : 16, i === 2 ? '#7dff6b' : '#fff', { ol: 4, skew: i === 2 ? -0.22 : 0 }); });
-    if (t > 240 && (this.t >> 4) & 1) txt(ctx, 'THANK YOU FOR PUNCHING', W / 2, 300, 26, '#ff4fa3', { ol: 6 });
+    L.forEach((s, i) => { if (t > 40 + i * 50) txt(ctx, s, W / 2, 150 + i * 28, i === 2 ? 22 : 15, i === 2 ? '#7dff6b' : '#fff', { ol: 4, skew: i === 2 ? -0.22 : 0 }); });
+    if (t > 240 && (T >> 4) & 1) txt(ctx, 'THANK YOU FOR PUNCHING', W / 2, 286, 26, '#ff4fa3', { ol: 6 });
   },
   poseSheet() {
     ctx.fillStyle = '#334'; ctx.fillRect(0, 0, W, H);
