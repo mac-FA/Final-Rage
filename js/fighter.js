@@ -292,9 +292,9 @@ class Fighter {
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       for (let i = 1; i < tr.length; i++) {
         const a = tr[i - 1], b = tr[i]; if (a.brk || b.brk || a.life <= 0) continue;
-        const u = b.life / 7; ctx.globalAlpha = u * 0.8;
-        ctx.strokeStyle = this.def.col || '#fff'; ctx.lineWidth = b.w * 2 * u; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = b.w * u; ctx.stroke();
+        const u = b.life / 7; ctx.globalAlpha = u * u * 0.6;
+        ctx.strokeStyle = this.def.col || '#fff'; ctx.lineWidth = b.w * 1.5 * u; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = b.w * 0.55 * u; ctx.stroke();
       }
       ctx.restore();
     }

@@ -120,9 +120,13 @@ const G = {
   },
   saveHi() { if (this.score > this.hi) { this.hi = this.score; try { localStorage.setItem('finalrage-hi', this.hi); } catch (e) { } } },
   world() {
+    // presses that land on a frozen frame (hit-stop, cut-in, slow-motion) are held until the action resumes
+    const I = Input.hit, L = this.latch || (this.latch = {});
+    for (const k of ['atk', 'jump', 'spc', 'left', 'right', 'up', 'down']) if (I[k]) L[k] = true;
     if (this.cutin) { if (++this.cutin.t >= 62) this.cutin = null; FX.update(); return; }
     if (this.hitstop > 0) { this.hitstop--; FX.update(); return; }
     if (this.slow > 0) { this.slow--; if (this.t % 3) return; }
+    for (const k in L) { if (L[k]) I[k] = true; L[k] = false; }
     const p = this.player, sd = STAGE_DATA[this.stageI];
     p.update();
     for (const e of this.ents) e.update();
@@ -486,6 +490,7 @@ if (Q.get('play')) G.newGame();
 
 let last = performance.now(), acc = 0, slow = 17, sinceQ = 0;
 function frame(now) {
+  if (window.NOLOOP) { last = now; requestAnimationFrame(frame); return; } // test hook: let a script drive G.step()
   const dt = now - last; if (dt < 100) slow = slow * 0.96 + dt * 0.04; // smoothed frame interval
   acc += Math.min(100, dt); last = now;
   let n = 0; while (acc >= 16.6 && n < 4) { G.step(); acc -= 16.667; n++; }

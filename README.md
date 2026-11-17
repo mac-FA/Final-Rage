@@ -51,4 +51,6 @@ whose invisible wall and invisible mallet are both very real), El Palomo (pigeon
 | `js/fighter.js` | fighter state machine, hit detection, supers, enemy/boss AI, props, pickups, projectiles |
 | `js/game.js` | game flow, camera, HUD, cut-ins, menus, main loop |
 
+The game lowers its render resolution on its own if a device cannot keep up.
+
 Debug helpers: `index.html?play=1&hero=0..2&stage=0..2&rage=1&god=1`, and `?poses=1&page=0..2` for the pose sheet.
