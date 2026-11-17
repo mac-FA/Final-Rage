@@ -33,7 +33,7 @@ const G = {
   paused: false, auto: false, ban: null, card: null, lastHit: null, lastHitT: 0, tap: null, built: {}, hi: 0,
   enemies() { return this.ents.filter(e => e.alive); },
   addCombo() { this.combo++; this.comboT = 140; this.comboPop = 1; if (this.combo > this.bestCombo) this.bestCombo = this.combo; },
-  punch(cx, cy) { this.zoom = 1.1; this.zfx = clamp(cx - this.camX, 200, W - 200); this.zfy = clamp(cy, 150, H - 100); },
+  punch(cx, cy) { this.blur = 7; this.zoom = 1.1; this.zfx = clamp(cx - this.camX, 200, W - 200); this.zfy = clamp(cy, 150, H - 100); },
   banner(s, col, dur, sub) { this.ban = { s, col: col || '#fff', t: 0, dur: dur || 120, sub }; },
   startCutin(pl) { this.cutin = { t: 0, pl }; Sfx.play('cutin'); Sfx.play('super'); },
   setState(s) { this.state = s; this.st = 0; },
@@ -46,12 +46,14 @@ const G = {
     this.ents = []; this.picks = []; this.projs = []; FX.clear(); this.camX = 0; this.waveI = 0; this.wave = null; this.queue = []; this.goT = 0;
     this.props = sd.props.map(p => new Prop(p[0], p[1], p[2], p[3]));
     const p = this.player; p.x = -40; p.z = 100; p.y = 0; p.vx = p.vy = p.vz = 0; p.hp = p.maxhp; p.dhp = p.hp; p.state = 'walk'; p.move = null; p.anim = null; p.setAnim('walk', 0); p.facing = 1; p.inv = 0; p.sup = null; p.ghosts = []; p.trail = [];
+    this.rim = ['#ff5ad0', '#ffc070', '#b8d4ff'][i]; this.blur = 0;
     this.maxAtk = 2 + (i > 0 ? 1 : 0); this.combo = 0; this.hitstop = 0; this.slow = 0; this.zoomT = 1; this.card = null; this.ban = null;
     this.auto = true; this.setState('intro'); Music.start(TUNES[sd.tune]);
   },
   spawn(type, side, z) {
     const e = new Enemy(type, 0, z);
-    if (side === 0) { e.x = this.camX + rand(180, W - 180); e.y = 520; e.vy = -3; e.state = 'jump'; e.entered = true; e.anim = null; e.setAnim('fall', 0); }
+    if (e.def.boss && type !== 'gyozilla') { side = 0; e.dropIn = true; }
+    if (side === 0) { e.x = e.def.boss ? this.camX + W * 0.7 : this.camX + rand(180, W - 180); e.y = 520; e.vy = -3; e.state = 'jump'; e.entered = true; e.anim = null; e.setAnim('fall', 0); }
     else e.x = side > 0 ? this.camX + W + 70 : this.camX - 70;
     e.facing = e.x > this.player.x ? -1 : 1;
     this.ents.push(e);
@@ -76,7 +78,7 @@ const G = {
     Input.tick(); this.t++; this.st++;
     if (this.shake > 0) this.shake *= 0.86; if (this.shake < 0.4) this.shake = 0;
     if (this.invert > 0) this.invert--; if (this.flash > 0) this.flash -= 0.08;
-    this.zoom += (this.zoomT - this.zoom) * 0.14;
+    this.zoom += (this.zoomT - this.zoom) * 0.14; if (this.blur > 0) this.blur--;
     if (this.comboPop > 0) this.comboPop -= 0.1;
     switch (this.state) {
       case 'title': if (this.st > 20 && Input.any()) { Sfx.play('ok'); this.setState('select'); } break;
@@ -88,7 +90,13 @@ const G = {
         if (go && this.st > 15) { Sfx.play('ok'); Sfx.play('super'); this.flash = 1; this.newGame(); }
         break;
       }
-      case 'intro': this.world(); { const p = this.player; p.vx = 2.6; p.state = 'walk'; p.setAnim('walk', 4); if (this.st > 150 || (this.st > 40 && Input.any())) { this.auto = false; p.state = 'idle'; this.setState('play'); } } break;
+      case 'intro': this.world(); {
+        const p = this.player;
+        if (this.st < 64) { p.vx = 5.4; p.state = 'run'; p.setAnim(p.runName, 4); if (this.st % 3 === 0) p.addGhost(10); if (this.st % 5 === 0) dustPuff(p.x - 14, p.gy, 1, 2); } // dash in...
+        else if (this.st === 64) { p.vx = 0; p.state = 'win'; p.anim = null; p.setAnim(p.def.win, 6); p.sqV = -0.08; dustPuff(p.x + 24, p.gy, 9, 6); Sfx.play('dash'); Sfx.play('ok'); // ...skid, pose, shout
+          FX.add({ k: 'bubble', ent: p, s: p.def.cry, x: p.x, y: 0, life: 84, front: 1 }); for (let i = 0; i < 8; i++) FX.add({ k: 'star', x: p.x + rand(-60, 60), y: p.gy - rand(40, 190), size: rand(10, 24), life: rand(16, 34) | 0, col: p.def.col, front: 1 }); }
+        if (this.st > 150 || (this.st > 70 && Input.any())) { this.auto = false; p.state = 'idle'; p.anim = null; p.setAnim(p.idleName, 6); this.setState('play'); }
+      } break;
       case 'play':
         if (Input.hit.start) { this.paused = !this.paused; Sfx.play('select'); }
         if (!this.paused) this.world();
@@ -166,10 +174,12 @@ const G = {
     if (z !== 1) { ctx.translate(this.zfx, this.zfy); ctx.scale(z, z); ctx.translate(-this.zfx, -this.zfy); }
     if (sh) ctx.translate(rand(-sh, sh) * 0.7, rand(-sh, sh) * 0.7);
     sc.draw(ctx, cam, t);
+    const list = this.props.concat(this.ents, [p]).sort((a, b) => a.z - b.z);
+    if (sc.reflect) this.reflections(sc.reflect, cam, t);
+    if (sc.glow) sc.glow(ctx, cam, t);
     const sa = this.cutin ? 1 : this.superA;
     if (sa > 0.02) { ctx.fillStyle = `rgba(8,2,22,${sa * 0.78})`; ctx.fillRect(-60, -60, W + 120, H + 120); streakField(ctx, t, sa * 0.75, [p.def.col, p.def.col2, '#ffffff'], 46); }
     ctx.save(); ctx.translate(-cam, 0);
-    const list = this.props.concat(this.ents, [p]).sort((a, b) => a.z - b.z);
     for (const e of list) e.drawShadow(ctx);
     for (const pk of this.picks) drawPickup(ctx, pk);
     let pi = 0; const pr = this.projs.slice().sort((a, b) => a.z - b.z);
@@ -180,6 +190,12 @@ const G = {
     sc.front(ctx, cam, t);
     FX.draw(ctx, cam, true);
     ctx.restore();
+    if (this.blur > 0) { // zoom-blur: smear the frame outward from the point of impact
+      const k = this.blur / 7, cx = this.zfx * SCALE, cy = this.zfy * SCALE;
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 0.24;
+      for (let i = 1; i <= 3; i++) { const zz = 1 + 0.022 * i * k; ctx.drawImage(canvas, cx - cx * zz, cy - cy * zz, canvas.width * zz, canvas.height * zz); }
+      ctx.restore();
+    }
     // impact panel: freeze + focus lines
     if (this.hitstop > 5 && !this.cutin) speedLines(ctx, this.zfx, this.zfy, t, 0.55, '#fff', 150);
     else if (p.state === 'run' || (p.move && p.move.keep && p.mf < p.move.keep)) streakField(ctx, t, 0.16, ['#fff'], 60);
@@ -187,7 +203,20 @@ const G = {
     // vignette
     if (!this.vig) { this.vig = ctx.createRadialGradient(W / 2, H / 2, 260, W / 2, H / 2, 620); this.vig.addColorStop(0, 'rgba(0,0,0,0)'); this.vig.addColorStop(1, 'rgba(4,0,14,0.38)'); }
     ctx.fillStyle = this.vig; ctx.fillRect(0, 0, W, H);
+    if (sa > 0.02) { ctx.fillStyle = '#05010c'; ctx.fillRect(0, 0, W, 30 * sa); ctx.fillRect(0, H - 30 * sa, W, 30 * sa); } // cinematic bars
     if (this.cutin) this.drawCutin();
+  },
+  reflections(cfg, cam, t) {
+    let rc = this.rc; if (!rc) { rc = this.rc = document.createElement('canvas'); rc.width = W; rc.height = H - FLOOR; this.rx = rc.getContext('2d'); }
+    const x = this.rx; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, rc.height); x.setTransform(1, 0, 0, 1, -cam, -FLOOR);
+    for (const e of this.ents.concat([this.player])) {
+      if (!e.J || e.remove || e.x - cam < -120 || e.x - cam > W + 120) continue;
+      x.save(); x.translate(0, e.gy * 1.8 + 3); x.scale(1, -0.8); drawFighter(x, e.st, e.J, null); x.restore();
+    }
+    ctx.save(); ctx.globalAlpha = cfg.a;
+    if (cfg.ripple) for (let y = 0; y < rc.height; y += 3) ctx.drawImage(rc, 0, y, W, 3, Math.sin(y * 0.33 + t * 0.14) * (1 + y * 0.02), FLOOR + y, W, 3);
+    else ctx.drawImage(rc, 0, FLOOR);
+    ctx.restore();
   },
   drawCutin() {
     const c = this.cutin, t = c.t, d = c.pl.def, a = EASE.o(Math.min(1, t / 7)) * (t > 54 ? Math.max(0, 1 - (t - 54) / 7) : 1), hh = 118 * a;
@@ -227,6 +256,7 @@ const G = {
   drawHUD() {
     const p = this.player, d = p.def, t = this.t;
     // player panel
+    ctx.save(); if (p.flash > 0) ctx.translate(rand(-4, 4), rand(-3, 3));
     para(ctx, 10, 10, 360, 66, 14); ctx.fillStyle = 'rgba(10,4,24,0.72)'; ctx.fill(); ctx.strokeStyle = d.col; ctx.lineWidth = 3; ctx.stroke();
     ctx.save(); para(ctx, 16, 14, 58, 58, 12); ctx.fillStyle = d.col2; ctx.fill(); ctx.clip();
     drawHead(ctx, d.style, [48 + (p.flash > 0 ? rand(-3, 3) : 0), 46], 21, -0.08, 1, p.hp <= 0 || p.state === 'hurt' || p.state === 'launched' ? 'hurt' : p.state === 'attack' || p.state === 'super' ? 'yell' : p.state === 'win' ? 'grin' : 'calm');
@@ -237,6 +267,7 @@ const G = {
     const full = p.rage >= 100;
     this.bar(86, 56, 190, 9, p.rage / 100, 0, full ? ((t >> 2) & 1 ? ['#fff', '#ffd31a'] : ['#ff2a6d', '#ffd31a']) : ['#05d9e8', '#b967ff'], 4);
     txt(ctx, full ? 'RAGE MAX!' : 'RAGE', 286, 61, full ? 13 : 10, full ? ((t >> 2) & 1 ? '#fff' : '#ff2a6d') : '#9fd', { align: 'left', ol: 3 });
+    ctx.restore();
     if (full && this.state === 'play') txt(ctx, Input.isTouch ? 'TAP  RAGE !!' : 'PRESS [ L ] — UNLEASH!!', 20, 96 + Math.sin(t * 0.3) * 2, 15, (t >> 2) & 1 ? '#ffd31a' : '#fff', { align: 'left', ol: 4 });
     // score
     txt(ctx, 'SCORE', W / 2, 16, 11, '#9fd', { ol: 3 }); txt(ctx, String(this.score).padStart(7, '0'), W / 2, 36, 24, '#fff', { ol: 5 });
@@ -295,8 +326,8 @@ const G = {
     }
   },
   controls(y) {
-    const L = Input.isTouch ? ['LEFT STICK  move  (push far to DASH)', 'HIT  combo / dash attack / air attack', 'JUMP  jump          RAGE  spin special — or SUPER when meter is full']
-      : ['ARROWS / WASD  move        double-tap ← →  DASH', 'J / Z  attack (mash for combo)        K / X / SPACE  jump', 'L / C  spin special (costs HP) — or SUPER when RAGE is full', 'ENTER  pause        M  mute        gamepads welcome'];
+    const L = Input.isTouch ? ['LEFT STICK  move  (push far to DASH)', 'HIT  combo / dash attack / air attack — walk into a goon to GRAB, then HIT or JUMP to throw', 'JUMP  jump          RAGE  spin special — or SUPER when meter is full']
+      : ['ARROWS / WASD  move        double-tap ← →  DASH', 'J / Z  attack (mash for combo)        K / X / SPACE  jump', 'walk into a goon to GRAB — attack: knee   back+attack or jump: THROW', 'L / C  spin special (costs HP) — or SUPER when RAGE is full', 'ENTER  pause        M  mute        gamepads welcome'];
     L.forEach((s, i) => txt(ctx, s, W / 2, y + i * 26, 16, '#fff', { ol: 4, skew: 0 }));
   },
   drawStageCard() {
@@ -305,8 +336,8 @@ const G = {
     ctx.fillStyle = 'rgba(8,2,20,0.55)'; ctx.fillRect(0, 0, W, H);
     para(ctx, -30 - sx, 170, W + 60, 70, 40); ctx.fillStyle = '#ff2a6d'; ctx.fill();
     para(ctx, -30 + sx, 246, W + 60, 44, 26); ctx.fillStyle = '#05d9e8'; ctx.fill();
-    txt(ctx, 'STAGE ' + (this.stageI + 1), 150 - sx, 204, 34, INK, { ol: 0 });
-    txt(ctx, sd.name, W / 2 + 60 - sx, 206, 56, '#fff', { ol: 10 });
+    txt(ctx, 'STAGE ' + (this.stageI + 1), 120 - sx, 204, 34, INK, { ol: 0 });
+    txt(ctx, sd.name, W / 2 + 110 - sx, 206, 56, '#fff', { ol: 10, maxW: 600 });
     txt(ctx, sd.sub, W / 2 + sx, 268, 20, INK, { ol: 0 });
     ctx.globalAlpha = 1;
   },
@@ -321,7 +352,7 @@ const G = {
     }
     const sx = (1 - EASE.o(Math.min(1, t / 12))) * 600;
     para(ctx, -70 - sx, 96, 640, 116, 50); ctx.fillStyle = 'rgba(10,4,24,0.8)'; ctx.fill(); ctx.strokeStyle = '#ffd31a'; ctx.lineWidth = 3; ctx.stroke();
-    txt(ctx, d.name, 44 - sx, 138, 50, '#ffd31a', { align: 'left', ol: 9 });
+    txt(ctx, d.name, 44 - sx, 138, 50, '#ffd31a', { align: 'left', ol: 9, maxW: 470 });
     txt(ctx, d.tag, 36 - sx, 188, 18, '#fff', { align: 'left', ol: 4 });
     ctx.globalAlpha = 1;
   },
@@ -334,24 +365,41 @@ const G = {
   },
   dummies() { return this.dm || (this.dm = HEROES.map(h => new Mannequin(h, 1.3))); },
   drawTitle() {
-    const t = this.t; this.menuBg(0.72);
-    speedLines(ctx, W / 2, 250, t, 0.1, '#ff2a6d', 260);
-    const dm = this.dummies(), gy = 528, pos = [[W / 2, 'winR', 1], [W / 2 - 300, 'winH', 1], [W / 2 + 300, 'winB', -1]];
+    const t = this.t; this.menuBg(0.74);
+    // slash band + screentone behind the logo
+    ctx.save(); ctx.translate(W / 2, 150); ctx.rotate(-0.06);
+    const bg = ctx.createLinearGradient(-560, 0, 560, 0); bg.addColorStop(0, 'rgba(200,16,46,0)'); bg.addColorStop(0.25, 'rgba(200,16,46,0.9)'); bg.addColorStop(0.75, 'rgba(255,42,109,0.9)'); bg.addColorStop(1, 'rgba(255,42,109,0)');
+    ctx.fillStyle = bg; ctx.fillRect(-560, -78, 1120, 156);
+    ctx.save(); ctx.beginPath(); ctx.rect(-560, -78, 1120, 156); ctx.clip(); halftone(ctx, -560, -78, 1120, 156, 'rgba(20,4,30,0.32)', 0, t); ctx.restore();
+    ctx.fillStyle = '#fff'; ctx.fillRect(-560, -84, 1120, 3); ctx.fillRect(-560, 81, 1120, 3);
+    ctx.restore();
+    speedLines(ctx, W / 2, 250, t, 0.1, '#ffd31a', 260);
+    txt(ctx, '激', 110, 330, 210, 'rgba(255,42,109,0.16)', { font: JFONT, ol: 0, skew: 0, rot: -0.1 });
+    txt(ctx, '怒', W - 110, 330, 210, 'rgba(5,217,232,0.14)', { font: JFONT, ol: 0, skew: 0, rot: 0.1 });
+    // the cast, cycling through their signature poses
+    const dm = this.dummies(), gy = 530, pos = [[W / 2, 1], [W / 2 - 300, 1], [W / 2 + 300, -1]];
     [1, 2, 0].forEach(i => {
-      const [x, an, f] = pos[i], h = HEROES[i];
+      const [x, f] = pos[i], h = HEROES[i], an = h.flex[(((t + i * 47) / 140) | 0) % h.flex.length];
       ctx.fillStyle = 'rgba(8,4,20,0.5)'; ctx.beginPath(); ctx.ellipse(x, gy, 60, 12, 0, 0, TAU); ctx.fill();
-      dm[i].draw(ctx, x - f * 14, gy, an, 0, f, h.col2, 0.5); dm[i].draw(ctx, x - f * 7, gy, an, 0, f, h.col, 0.6); dm[i].draw(ctx, x, gy, an, 0, f);
+      const J = dm[i].draw(ctx, x, gy, an, 0, f);
+      ctx.save(); ctx.globalAlpha = 0.45; ctx.translate(-f * 12, 0); drawFighter(ctx, dm[i].st, J, h.col2); ctx.translate(f * 6, 0); ctx.globalAlpha = 0.55; drawFighter(ctx, dm[i].st, J, h.col); ctx.restore();
+      dm[i].draw(ctx, x, gy, an, 0, f);
     });
-    const j = (t % 90) < 6 ? rand(-3, 3) : 0;
-    txt(ctx, 'FINAL', W / 2 - 170 + j, 96, 76, '#fff', { ol: 14, rot: -0.06 });
-    const g = ['#ffe14a', '#ff5a1a', '#c8102e'];
-    txt(ctx, 'RAGE', W / 2 + 40 - j, 160, 170, '#000', { ol: 30, rot: -0.06, stroke: '#000' });
-    txt(ctx, 'RAGE', W / 2 + 40 - j, 160, 170, g, { ol: 12, rot: -0.06, stroke: '#fff' });
-    txt(ctx, '激怒', W / 2 + 330, 96, 40, '#ff2a6d', { font: JFONT, ol: 8, rot: 0.1 });
-    txt(ctx, '— TURBO JUSTICE EDITION —', W / 2, 252, 20, '#05d9e8', { ol: 5 });
+    // embers
+    const r = RNG(77); ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 40; i++) { const x = r() * W + Math.sin(t * 0.02 + i) * 30, y = H - ((r() * 700 + t * (0.8 + r() * 1.6)) % 700), s = 1 + r() * 2.5; ctx.fillStyle = `rgba(255,${(120 + r() * 120) | 0},40,${0.3 + r() * 0.5})`; ctx.fillRect(x, y, s, s * 2.2); }
+    ctx.restore();
+    // logo, with a chunky extrude
+    const j = (t % 110) < 6 ? rand(-3, 3) : 0, pulse = 1 + Math.sin(t * 0.08) * 0.012;
+    txt(ctx, 'FINAL', W / 2 - 176 + j, 92, 78, '#fff', { ol: 15, rot: -0.06 });
+    for (let k = 7; k > 0; k--) txt(ctx, 'RAGE', W / 2 + 40 - j + k * 1.6, 160 + k * 1.8, 172, k === 7 ? '#000' : '#7a0a1e', { ol: k === 7 ? 30 : 12, rot: -0.06, stroke: k === 7 ? '#000' : '#7a0a1e', sc: pulse });
+    txt(ctx, 'RAGE', W / 2 + 40 - j, 160, 172, ['#fff6b0', '#ffd31a', '#ff5a1a', '#c8102e'], { ol: 12, rot: -0.06, stroke: '#fff', sc: pulse });
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gx = ((t * 9) % 1500) - 300; // glint sweeping the logo
+    ctx.translate(gx, 150); ctx.rotate(0.5); const gl = ctx.createLinearGradient(-40, 0, 40, 0); gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(0.5, 'rgba(255,255,255,0.22)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gl; ctx.fillRect(-40, -140, 80, 280); ctx.restore();
+    txt(ctx, '— TURBO JUSTICE EDITION —', W / 2, 254, 20, '#05d9e8', { ol: 5 });
     if ((t >> 4) & 1) txt(ctx, Input.isTouch ? 'TAP TO START' : 'PRESS ENTER', W / 2, 300, 30, '#ffd31a', { ol: 7 });
     const s = STORY[((t / 260) | 0) % STORY.length], a = Math.min(1, (t % 260) / 20, (260 - t % 260) / 20);
-    ctx.globalAlpha = a; txt(ctx, s, W / 2, H - 18, 14, '#fff', { ol: 4, skew: 0 }); ctx.globalAlpha = 1;
+    ctx.globalAlpha = a; txt(ctx, s, W / 2, H - 16, 14, '#fff', { ol: 4, skew: 0 }); ctx.globalAlpha = 1;
     if (this.hi) txt(ctx, 'HI ' + this.hi, W - 14, 16, 14, '#fff', { align: 'right', ol: 4 });
   },
   drawSelect() {

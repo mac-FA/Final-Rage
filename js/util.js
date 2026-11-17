@@ -14,6 +14,12 @@ function shade(hex, f) {
   const n = parseInt(h, 16), r = clamp(((n >> 16) & 255) * f, 0, 255) | 0, g = clamp(((n >> 8) & 255) * f, 0, 255) | 0, b = clamp((n & 255) * f, 0, 255) | 0;
   return _shadeCache[k] = `rgb(${r},${g},${b})`;
 }
+function tint(hex, f) {
+  const k = hex + 't' + f; if (_shadeCache[k]) return _shadeCache[k];
+  let h = hex.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const n = parseInt(h, 16), m = v => (v + (255 - v) * f) | 0;
+  return _shadeCache[k] = `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`;
+}
 const FONT = 'Impact, "Haettenschweiler", "Arial Narrow Bold", "Arial Black", sans-serif';
 const JFONT = '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", "Noto Sans JP", "MS Gothic", Impact, sans-serif';
 /* outlined, optionally skewed text */
@@ -27,6 +33,7 @@ function txt(ctx, s, x, y, size, fill, o) {
   ctx.font = `${o.w || 900} ${size}px ${o.font || FONT}`;
   ctx.textAlign = o.align || 'center'; ctx.textBaseline = o.base || 'middle';
   ctx.lineJoin = 'round';
+  if (o.maxW) { const mw = ctx.measureText(s).width; if (mw > o.maxW) ctx.scale(o.maxW / mw, o.maxW / mw); }
   if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur || 16; }
   if (o.ol !== 0) { ctx.lineWidth = o.ol || Math.max(3, size * 0.16); ctx.strokeStyle = o.stroke || INK; ctx.strokeText(s, 0, 0); }
   if (Array.isArray(fill)) { const g = ctx.createLinearGradient(0, -size * 0.42, 0, size * 0.42); fill.forEach((c, i) => g.addColorStop(i / (fill.length - 1), c)); fill = g; }

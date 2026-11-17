@@ -25,6 +25,13 @@ function windows(x, r, bx, by, w, h, cw, ch, p, cols) {
   x.globalAlpha = 1;
 }
 
+/* additive light pool on the floor */
+function lightPool(ctx, x, y, rx, ry, rgb, a) {
+  if (x < -rx || x > W + rx) return;
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, ry / rx);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g; ctx.fillRect(-rx, -rx, rx * 2, rx * 2); ctx.restore();
+}
 const Scenery = [
   /* ================= STAGE 1 : NEON GUTTER ================= */
   {
@@ -115,6 +122,11 @@ const Scenery = [
       ctx.fillStyle = 'rgba(192,42,128,0.18)'; ctx.fillRect(0, 0, W, FLOOR);
       tile(ctx, L.mid, cam * 0.45, 0);
       tile(ctx, L.near, cam, 0);
+      for (let n = Math.floor(cam / 1440); n <= Math.floor((cam + W) / 1440); n++) for (let k = 0; k < 4; k++) { // arcade cabinets never sleep
+        const x = n * 1440 + 480 + 33 + k * 50 - cam; if (x < -30 || x > W) continue;
+        ctx.fillStyle = ['#ff2a6d', '#ffd31a', '#7dff6b', '#05d9e8'][((t >> 4) + k * 3) & 3]; ctx.fillRect(x, 256, 26, 22);
+        ctx.fillStyle = '#12082a'; ctx.fillRect(x + 4 + ((t >> 2) + k * 5) % 16, 262 + ((t >> 3) + k) % 10, 5, 5);
+      }
       // wet street
       ctx.fillStyle = '#3d3566'; ctx.fillRect(0, FLOOR, W, 12); ctx.fillStyle = '#22193f'; ctx.fillRect(0, FLOOR + 10, W, 4);
       const g = ctx.createLinearGradient(0, FLOOR + 14, 0, H); g.addColorStop(0, '#33276a'); g.addColorStop(1, '#171034'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR + 14, W, H - FLOOR - 14);
@@ -125,6 +137,16 @@ const Scenery = [
       // rain ripples
       const r = RNG(((t / 6) | 0) + 3); ctx.strokeStyle = '#ffffff30'; ctx.lineWidth = 1;
       for (let i = 0; i < 14; i++) { const x = r() * W, y = FLOOR + 20 + r() * 180, a = (t % 6) / 6; ctx.beginPath(); ctx.ellipse(x, y, 3 + a * 9, 1 + a * 3, 0, 0, TAU); ctx.stroke(); }
+    },
+    reflect: { a: 0.34, ripple: 1 },
+    glow(ctx, cam, t) { // shop light spilling onto the wet street, with the odd dying-neon flicker
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const P = [[120, '255,170,70'], [600, '40,220,240'], [1080, '255,70,190'], [840, '255,60,110']];
+      for (let n = -1; n < 2; n++) for (let i = 0; i < P.length; i++) {
+        const fl = (Math.sin(t * 0.37 + i * 9) > 0.93 || (i === 3 && (t >> 2) % 23 < 2)) ? 0.25 : 1;
+        lightPool(ctx, P[i][0] + (Math.floor(cam / 1440) + n) * 1440 - cam, FLOOR + 26, i === 3 ? 90 : 190, i === 3 ? 30 : 64, P[i][1], (0.3 + 0.04 * Math.sin(t * 0.09 + i)) * fl);
+      }
+      ctx.restore();
     },
     front(ctx, cam, t) {
       ctx.strokeStyle = '#cfe6ff55'; ctx.lineWidth = 1.2; ctx.beginPath(); const r = RNG(9);
@@ -194,6 +216,10 @@ const Scenery = [
         }
       }
       tile(ctx, L.near, cam, 0);
+      for (let m = Math.floor(cam / 240); m <= Math.floor((cam + W) / 240); m++) for (let k = 0; k < 4; k++) { // steam off the grills
+        const u = ((t * 0.012 + k * 0.25 + m * 0.37) % 1), x = m * 240 + 120 - cam + Math.sin(u * 6 + m) * 14 + (k - 1.5) * 22, y = 262 - u * 90;
+        ctx.fillStyle = `rgba(255,244,225,${0.26 * (1 - u)})`; ctx.beginPath(); ctx.arc(x, y, 8 + u * 16, 0, TAU); ctx.fill();
+      }
       // plank pier
       const g = ctx.createLinearGradient(0, FLOOR, 0, H); g.addColorStop(0, '#8a5236'); g.addColorStop(1, '#4a2420'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR, W, H - FLOOR);
       ctx.fillStyle = '#3a1a16'; ctx.fillRect(0, FLOOR, W, 5);
@@ -203,6 +229,11 @@ const Scenery = [
         for (let k = 0; k < 9; k++) { const x = ((k * 150 + row * 67 - cam) % 1350 + 1350) % 1350 - 100; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 25); ctx.stroke(); }
       }
       const g2 = ctx.createLinearGradient(0, FLOOR, 0, FLOOR + 70); g2.addColorStop(0, 'rgba(255,190,90,0.35)'); g2.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = g2; ctx.fillRect(0, FLOOR, W, 70);
+    },
+    glow(ctx, cam, t) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = -1; i < 6; i++) lightPool(ctx, i * 240 + 120 - (((cam % 240) + 240) % 240), FLOOR + 22, 130, 46, '255,170,80', 0.2 + 0.03 * Math.sin(t * 0.07 + i * 2));
+      ctx.restore();
     },
     front(ctx, cam, t) {
       const r = RNG(19); ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -256,6 +287,13 @@ const Scenery = [
       const mx = 690 - cam * 0.02;
       ctx.save(); ctx.shadowColor = '#bcd4ff'; ctx.shadowBlur = 70; ctx.fillStyle = '#f4f1dc'; ctx.beginPath(); ctx.arc(mx, 150, 128, 0, TAU); ctx.fill(); ctx.restore();
       ctx.fillStyle = '#d8d2b4'; [[-40, -30, 26], [34, 20, 34], [-10, 60, 16], [60, -50, 14], [-70, 30, 12]].forEach(c => { ctx.beginPath(); ctx.arc(mx + c[0], 150 + c[1], c[2], 0, TAU); ctx.fill(); });
+      { // the chairman's helicopter, looking for you
+        const hx = ((t * 1.1) % 1700) - 350, hy = 70 + Math.sin(t * 0.02) * 14;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,240,170,0.12)'; ctx.beginPath(); ctx.moveTo(hx, hy + 8); ctx.lineTo(hx - 110 + Math.sin(t * 0.03) * 60, FLOOR); ctx.lineTo(hx + 20 + Math.sin(t * 0.03) * 60, FLOOR); ctx.fill(); ctx.restore();
+        ctx.fillStyle = '#0a0e26'; ctx.beginPath(); ctx.ellipse(hx, hy, 20, 9, 0, 0, TAU); ctx.fill(); ctx.fillRect(hx - 44, hy - 3, 30, 4); ctx.fillRect(hx - 48, hy - 10, 4, 12); ctx.fillRect(hx - 2, hy - 14, 3, 8);
+        ctx.fillRect(hx - 34 * Math.abs(Math.sin(t * 0.9)), hy - 16, 68 * Math.abs(Math.sin(t * 0.9)), 2);
+        if ((t >> 3) & 1) { ctx.fillStyle = '#ff3355'; ctx.fillRect(hx - 48, hy - 12, 4, 4); }
+      }
       for (let i = 0; i < 7; i++) { const x = ((i * 260 - cam * 0.1 - t * 0.9 * (1 + i % 3 * 0.3)) % 1820 + 1820) % 1820 - 300, y = 60 + (i * 53) % 200; ctx.fillStyle = i % 2 ? 'rgba(40,50,110,0.75)' : 'rgba(90,80,160,0.5)'; ctx.beginPath(); ctx.ellipse(x, y, 170, 13, 0, 0, TAU); ctx.ellipse(x + 60, y + 9, 110, 9, 0, 0, TAU); ctx.fill(); }
       tile(ctx, L.far, cam * 0.1, 0);
       tile(ctx, L.mid, cam * 0.35, 0);
@@ -269,6 +307,13 @@ const Scenery = [
       ctx.fillStyle = '#c9971a'; ctx.fillRect(0, FLOOR, W, 4);
       const hx = 2500 - cam; if (hx > -300 && hx < W + 300) { ctx.strokeStyle = '#ffd31a88'; ctx.lineWidth = 8; ctx.beginPath(); ctx.ellipse(hx, 440, 230, 78, 0, 0, TAU); ctx.stroke(); txt(ctx, 'G', hx, 442, 120, '#ffd31a55', { skew: 0, ol: 0, sc: 1 }); }
       const g2 = ctx.createLinearGradient(0, FLOOR, 0, FLOOR + 80); g2.addColorStop(0, 'rgba(180,200,255,0.22)'); g2.addColorStop(1, 'rgba(180,200,255,0)'); ctx.fillStyle = g2; ctx.fillRect(0, FLOOR, W, 80);
+    },
+    reflect: { a: 0.2, ripple: 0 },
+    glow(ctx, cam, t) { // moonlight on polished marble
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      lightPool(ctx, 690 - cam * 0.02, FLOOR + 70, 260, 110, '170,200,255', 0.22);
+      for (let i = 0; i < 2; i++) lightPool(ctx, ((i * 700 + t * 3) % 1800) - 400, FLOOR + 60 + i * 60, 150, 40, '255,215,90', 0.14); // roaming spotlights
+      ctx.restore();
     },
     front(ctx, cam, t) {
       const r = RNG(29);

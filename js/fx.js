@@ -19,12 +19,15 @@ const FX = {
     const p = this.p;
     for (let i = 0; i < p.length; i++) {
       const o = p[i]; if (!!o.front !== !!front) continue;
+      if (o.ent) { o.x = o.ent.x; o.y = o.ent.gy - o.ent.y - (o.ent.state === 'down' ? 50 : 136) * o.ent.scale; if (o.ent.remove) continue; }
       const x = o.x - camX, y = o.y, t = o.life / o.max, a = 1 - t;
       if (x < -200 || x > W + 200) continue;
       switch (o.k) {
         case 'spark': {
           const r = o.size * (0.4 + EASE.o(a) * 0.9), n = o.n || 8;
-          ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, t * 2.2);
+          ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.globalAlpha = Math.min(1, t * 2.2);
+          ctx.fillStyle = INK; ctx.beginPath(); for (let j = 0; j < n * 2; j++) { const rr = (j % 2 ? r * 0.28 : r * (j % 4 ? 1 : 0.7)) * 1.16 + 2, an = j / (n * 2) * TAU; ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } ctx.fill();
+          ctx.globalCompositeOperation = 'lighter';
           ctx.fillStyle = o.col; ctx.beginPath();
           for (let j = 0; j < n * 2; j++) { const rr = j % 2 ? r * 0.28 : r * (j % 4 ? 1 : 0.7), an = j / (n * 2) * TAU; ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); }
           ctx.fill();
@@ -34,6 +37,28 @@ const FX = {
         case 'streak': {
           ctx.globalAlpha = t; ctx.strokeStyle = o.col; ctx.lineWidth = o.size * t + 0.5; ctx.lineCap = 'round';
           ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - o.vx * (o.len || 3), y - o.vy * (o.len || 3)); ctx.stroke(); ctx.globalAlpha = 1; break;
+        }
+        case 'bang': { // jagged manga impact flash
+          const r = o.size * (0.55 + EASE.o(a) * 0.6);
+          ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.globalAlpha = Math.min(1, t * 3);
+          for (let pass = 0; pass < 2; pass++) { ctx.fillStyle = pass ? o.col : INK; ctx.beginPath(); for (let j = 0; j < o.pts.length; j++) { const rr = r * o.pts[j] * (pass ? 1 : 1.12) + (pass ? 0 : 3), an = j / o.pts.length * TAU; ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } ctx.fill(); }
+          ctx.restore(); break;
+        }
+        case 'smoke': { // cartoon puff: pops, then shrinks away
+          const r = o.size * (a < 0.18 ? a / 0.18 : Math.pow(1 - (a - 0.18) / 0.82, 0.6));
+          if (r < 0.6) break;
+          ctx.fillStyle = 'rgba(21,16,31,0.6)'; ctx.beginPath(); ctx.arc(x, y, r + 1.6, 0, TAU); ctx.fill();
+          ctx.fillStyle = o.col || '#efeaf8'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+          ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.45, 0, TAU); ctx.fill();
+          break;
+        }
+        case 'bubble': {
+          ctx.save(); ctx.globalAlpha = Math.min(1, t * 6, a * 10); ctx.font = '700 12px "Trebuchet MS", "Comic Sans MS", sans-serif';
+          const w = ctx.measureText(o.s).width + 18, bx = clamp(x - w / 2, 6, W - w - 6), by = y - 26;
+          ctx.fillStyle = INK; rrect(ctx, bx - 2, by - 2, w + 4, 26, 11); ctx.beginPath(); ctx.moveTo(x - 7, by + 22); ctx.lineTo(x + 2, by + 34); ctx.lineTo(x + 9, by + 22); ctx.fill();
+          ctx.fillStyle = '#fff'; rrect(ctx, bx, by, w, 22, 9); ctx.beginPath(); ctx.moveTo(x - 4, by + 21); ctx.lineTo(x + 2, by + 30); ctx.lineTo(x + 6, by + 21); ctx.fill();
+          ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.s, bx + w / 2, by + 11.5);
+          ctx.restore(); break;
         }
         case 'dust': {
           ctx.globalAlpha = t * 0.55; ctx.fillStyle = o.col || '#d8d0e8';
@@ -100,6 +125,8 @@ const FX = {
 const KATA_L = ['バシッ', 'ドカッ', 'ガッ', 'POW', 'BAM', 'WHAP', 'ベシ'];
 const KATA_H = ['ドゴォ!!', 'ズドン!!', 'バキィ!!', 'KRAK!!', 'DOOM!!', 'KA-BLAM!', 'ドッカーン!'];
 function hitSpark(x, y, heavy, col) {
+  const pts = []; for (let i = 0; i < (heavy ? 18 : 12); i++) pts.push(i % 2 ? rand(0.3, 0.5) : rand(0.75, 1.15));
+  FX.add({ k: 'bang', x, y, size: heavy ? 78 : 34, col: '#fff', pts, rot: rand(TAU), life: heavy ? 9 : 6 });
   FX.add({ k: 'spark', x, y, size: heavy ? 74 : 38, col: col || '#ffd31a', life: heavy ? 14 : 9, rot: rand(TAU), n: heavy ? 10 : 7 });
   if (heavy) { FX.add({ k: 'burst', x, y, size: 120, col: col || '#ff7a1a', life: 12 }); FX.add({ k: 'ring', x, y, size: 110, flat: 1, life: 12, w: 8, col: '#fff' }); }
   const n = heavy ? 16 : 7;
@@ -110,12 +137,21 @@ function hitText(x, y, heavy) {
   FX.add({ k: 'text', s, x: x + rand(-20, 20), y: y - rand(20, 50), vy: -0.5, size: heavy ? 50 : 24, life: heavy ? 46 : 26, rot0: rand(-0.3, 0.3), col: heavy ? '#ffe14a' : '#fff', font: /[^\x00-\x7f]/.test(s) ? JFONT : FONT, front: 1 });
 }
 function dustPuff(x, y, n, spread, col) {
-  for (let i = 0; i < n; i++) FX.add({ k: 'dust', x: x + rand(-8, 8), y: y + rand(-3, 3), vx: rand(-1, 1) * (spread || 2), vy: rand(-1.2, -0.1), drag: 0.93, size: rand(6, 13), life: rand(16, 30) | 0, col });
+  for (let i = 0; i < n; i++) FX.add({ k: 'smoke', x: x + rand(-8, 8), y: y + rand(-3, 2), vx: rand(-1, 1) * (spread || 2), vy: rand(-1.1, -0.1), drag: 0.9, size: rand(6, 12) + (spread || 2), life: rand(18, 32) | 0, col });
 }
 function debris(x, y, cols, n) {
   for (let i = 0; i < n; i++) FX.add({ k: 'debris', x, y: y - rand(0, 50), vx: rand(-5, 5), vy: rand(-9, -2), g: 0.5, size: rand(5, 13), asp: rand(0.4, 1.4), col: pick(cols), rot: rand(TAU), vr: rand(-0.4, 0.4), life: rand(30, 55) | 0, floor: y + rand(-4, 8) });
 }
 
+/* manga screentone: a dot grid whose dots grow along x */
+function halftone(ctx, x0, y0, w, h, col, flip, t) {
+  ctx.fillStyle = col; ctx.beginPath(); const step = 11, off = ((t || 0) * 0.3) % step;
+  for (let y = y0, row = 0; y < y0 + h; y += step * 0.866, row++) for (let x = x0 - off + (row % 2) * step / 2; x < x0 + w; x += step) {
+    let u = (x - x0) / w; if (flip) u = 1 - u; const r = 5.2 * clamp(u * 1.25 - 0.1, 0, 1); if (r < 0.5) continue;
+    ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU);
+  }
+  ctx.fill();
+}
 /* radial "focus" speed lines — the classic manga panel */
 function speedLines(ctx, cx, cy, tick, alpha, col, inner) {
   const r = RNG(((tick / 2) | 0) * 977 + 13);

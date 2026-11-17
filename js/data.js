@@ -65,7 +65,7 @@ const MOVES = {
 /* ---------- playable heroes ---------- */
 const HEROES = [
   {
-    id: 'ryker', name: 'RYKER VOLT', title: 'THE OVERNIGHT EXPRESS', quote: '"Signed, sealed, DELIVERED. To your face."',
+    id: 'ryker', cry: 'SPECIAL DELIVERY!!', flex: ['winR', 'upper', 'jab', 'hikick'], name: 'RYKER VOLT', title: 'THE OVERNIGHT EXPRESS', quote: '"Signed, sealed, DELIVERED. To your face."',
     hp: 100, pow: 1, speed: 2.6, jump: 11.5, stats: [3, 3, 3],
     combo: ['jab', 'cross', 'hikick', 'upper'], dash: 'knee', airAtk: 'divekick', spc: 'tornado',
     superName: '1000-PARCEL RUSH', superKata: '千件速達', sup: 'rush', col: '#ffd31a', col2: '#e8323c',
@@ -74,22 +74,22 @@ const HEROES = [
       chains: [{ at: 'neck', ox: 4, oy: -4, n: 13, seg: 8, w0: 10, w1: 5, col: '#ffd31a' }] })
   },
   {
-    id: 'hana', name: 'HANA "NEON" KISARAGI', title: 'IDOL DRUMMER, OFF HER LEASH', quote: '"This next one goes out to your RIBS!"',
+    id: 'hana', cry: 'ARE YOU READYYY?!', flex: ['winH', 'hikick', 'encore', 'sidekick'], name: 'HANA "NEON" KISARAGI', title: 'IDOL DRUMMER, OFF HER LEASH', quote: '"This next one goes out to your RIBS!"',
     hp: 85, pow: 0.92, speed: 3.2, jump: 12.5, stats: [2, 5, 3],
     combo: ['sidekick', 'hikickH', 'spinkick', 'axe'], dash: 'dropkick', airAtk: 'divekick', spc: 'split',
     superName: 'FINAL ENCORE', superKata: '最終公演', sup: 'encore', col: '#ff4fa3', col2: '#22d3ee',
     idle: 'idleH', run: 'nrun', win: 'winH',
-    style: mkStyle({ scale: 0.93, wT: 12.5, wB: 10, wA: 5.6, wL: 7.6, headR: 13.5, skin: '#ffd9bf', top: '#ff4fa3', shirt: '#fff', pants: '#22d3ee', shorts: 1, glove: '#fff', shoe: '#ffe14a', hair: '#3ad6c5', accent: '#ff4fa3',
+    style: mkStyle({ scale: 0.93, wT: 12.5, wB: 10, wA: 5.6, wL: 7.6, headR: 15, blush: 'rgba(255,90,140,0.45)', skin: '#ffd9bf', top: '#ff4fa3', shirt: '#fff', pants: '#22d3ee', shorts: 1, glove: '#fff', shoe: '#ffe14a', hair: '#3ad6c5', accent: '#ff4fa3',
       hairStyle: 'twin', sleeve: 0, deco: 'tank', eyeCol: '#b0236a',
       chains: [{ at: 'head', ox: -0.8, oy: -0.8, n: 10, seg: 7, w0: 10, w1: 3, col: '#3ad6c5' }, { at: 'head', ox: -0.25, oy: -1.1, n: 9, seg: 7, w0: 9, w1: 3, col: '#2bb8a8' }] })
   },
   {
-    id: 'brisket', name: 'GRANDMASTER BRISKET', title: 'PITMASTER. LOW & SLOW. MOSTLY SLOW.', quote: '"You been MARINATING in bad decisions, son."',
+    id: 'brisket', cry: 'DINNER. IS. SERVED.', flex: ['winB', 'power', 'palm', 'lariat'], name: 'GRANDMASTER BRISKET', title: 'PITMASTER. LOW & SLOW. MOSTLY SLOW.', quote: '"You been MARINATING in bad decisions, son."',
     hp: 130, pow: 1.22, speed: 2.05, jump: 10.5, stats: [5, 1, 4],
     combo: ['palm', 'hook', 'butt', 'hammer'], dash: 'shoulder', airAtk: 'splash', spc: 'lariat',
     superName: 'MEAT METEOR', superKata: '肉流星', sup: 'meteor', col: '#ff9a1a', col2: '#b3261e',
     idle: 'idleB', run: 'brun', win: 'winB',
-    style: mkStyle({ scale: 1.26, wT: 21, wB: 17, wA: 9.6, wL: 11.2, headR: 12.5, skin: '#c98a5e', top: '#b3261e', shirt: '#f4f0e6', pants: '#3a2a22', glove: '#ff9a1a', shoe: '#1c1c22', hair: '#d92b3a', accent: '#fff',
+    style: mkStyle({ scale: 1.26, wT: 21, wB: 17, wA: 9.6, wL: 11.2, headR: 13.5, skin: '#c98a5e', top: '#b3261e', shirt: '#f4f0e6', pants: '#3a2a22', glove: '#ff9a1a', shoe: '#1c1c22', hair: '#d92b3a', accent: '#fff',
       hairStyle: 'bandana', beard: '#f0ece0', brow: '#f0ece0', sleeve: 0, deco: 'belly',
       chains: [{ at: 'head', ox: -1.0, oy: -0.3, n: 5, seg: 6, w0: 6, w1: 4, col: '#d92b3a' }] })
   }
@@ -101,18 +101,18 @@ const ENEMIES = {
     style: mkStyle({ top: '#2a2a3a', pants: '#3b4a7a', glove: '#9a9ab0', shoe: '#111', hair: '#7dff6b', accent: '#7dff6b', hairStyle: 'mohawk', sleeve: 0, deco: 'tank', skin: '#e8b48a' }) },
   punk2: { name: 'SKIDMARK', hp: 44, speed: 1.9, pow: 1.2, score: 350, range: 62, attacks: ['ejab', 'ekick', 'ekick'], cd: [35, 90],
     style: mkStyle({ top: '#4a1030', pants: '#222', glove: '#ffd31a', shoe: '#111', hair: '#ff2a6d', accent: '#ff2a6d', hairStyle: 'mohawk', sleeve: 0, deco: 'tank', skin: '#c98a5e' }) },
-  suit: { name: 'MR. OVERTIME', hp: 42, speed: 1.4, pow: 1, score: 300, range: 70, attacks: ['ecase'], cd: [60, 130], ai: 'charger',
+  suit: { name: 'MR. OVERTIME', hp: 42, speed: 1.4, pow: 1, score: 300, range: 70, attacks: ['ecase'], cd: [60, 130], ai: 'charger', quirk: 'twitch',
     style: mkStyle({ top: '#3a4660', pants: '#2c364c', glove: '#f2c49b', shoe: '#111', hair: '#1a1a22', accent: '#d92b3a', hairStyle: 'slick', sleeve: 2, deco: 'suit', eyes: 'glasses', prop: 'case',
       chains: [{ at: 'head', ox: -0.95, oy: -0.35, n: 6, seg: 6, w0: 5, w1: 4, col: '#d92b3a' }] }) },
   mime: { name: 'SILENT PIERRE', hp: 40, speed: 1.2, pow: 1, score: 400, range: 86, attacks: ['ehammer'], cd: [70, 140], ai: 'mime', idle: 'wall',
     style: mkStyle({ skin: '#f6f6f6', top: '#fafafa', pants: '#15151c', glove: '#fff', shoe: '#15151c', hair: '#15151c', accent: '#15151c', hairStyle: 'beret', sleeve: 2, deco: 'stripes', eyes: 'mime', prop: 'mallet', scale: 0.98 }) },
-  pigeon: { name: 'EL PALOMO', hp: 34, speed: 2, pow: 1, score: 350, range: 60, attacks: ['ejab'], cd: [50, 110], ai: 'jumper', feathers: 1,
+  pigeon: { name: 'EL PALOMO', hp: 34, speed: 2, pow: 1, score: 350, range: 60, attacks: ['ejab'], cd: [50, 110], ai: 'jumper', feathers: 1, quirk: 'bob',
     style: mkStyle({ skin: '#9aa3b8', top: '#8a93a8', pants: '#7a3ad9', glove: '#ff8a1a', shoe: '#ff8a1a', hairStyle: 'bald', eyes: 'pigeon', accent: '#ffd31a', sleeve: 0, deco: 'bare', scale: 0.96,
       chains: [{ at: 'neck', ox: 5, oy: -2, n: 7, seg: 8, w0: 12, w1: 28, col: '#d92b3a', g: 0.2 }] }) },
   bouncer: { name: 'TINY', hp: 95, speed: 1.1, pow: 1.3, score: 800, range: 76, attacks: ['ecase', 'etackle'], cd: [70, 130], armor: 4, heavy: 1,
     style: mkStyle({ scale: 1.32, wT: 21, wB: 18, wA: 9.5, wL: 11, headR: 12, top: '#1c1c26', shirt: '#fff', pants: '#1c1c26', glove: '#8a5a3c', shoe: '#111', hairStyle: 'bald', eyes: 'shades', sleeve: 1, deco: 'belly', skin: '#8a5a3c', accent: '#fff' }) },
   // bosses
-  dj: { name: 'DJ SUBWOOFER', tag: 'HE DROPS THE BASS. ON YOU.', hp: 300, speed: 1.5, pow: 1.1, score: 5000, range: 90, boss: 1, armor: 5, heavy: 1, cd: [50, 100], idle: 'idleB', notes: 1,
+  dj: { name: 'DJ SUBWOOFER', tag: 'HE DROPS THE BASS. ON YOU.', hp: 300, speed: 1.5, pow: 1.1, score: 5000, range: 90, boss: 1, armor: 5, heavy: 1, cd: [50, 100], idle: 'idleB', notes: 1, quirk: 'groove',
     style: mkStyle({ scale: 1.5, wT: 21, wB: 17, wA: 9.8, wL: 11.5, headR: 12.5, skin: '#8a5a3c', top: '#7a1ad9', shirt: '#05d9e8', pants: '#5a12a8', glove: '#fff', shoe: '#ffd31a', hair: '#111', accent: '#05d9e8', hairStyle: 'phones', eyes: 'shades', sleeve: 2, deco: 'jacket',
       chains: [{ at: 'neck', ox: -6, oy: 6, n: 5, seg: 6, w0: 5, w1: 7, col: '#ffd31a', g: 0.5, wind: 0.05 }] }) },
   gyozilla: { name: 'CHEF GYOZILLA', tag: 'THE SECRET INGREDIENT IS VIOLENCE.', hp: 380, speed: 1.3, pow: 1.15, score: 8000, range: 100, boss: 1, armor: 5, heavy: 1, cd: [45, 95], idle: 'idleB',
@@ -158,5 +158,16 @@ const STAGE_DATA = [
     props: [['vase', 540, 24, 'ramen'], ['bust', 1200, 26, 'cash'], ['vase', 1260, 40, 'cash'], ['bust', 1960, 26, 'ramen'], ['vase', 2600, 26, 'ramen'], ['bust', 2900, 30, 'cash'], ['vase', 3560, 24, 'cake']]
   }
 ];
+const LINES = {
+  punk: ['nice scarf, NERD', 'this is OUR gutter', 'fun costs extra, pal', 'i have a mohawk AND a plan'],
+  punk2: ['i am the UPGRADED one', 'skid was my intern', 'hold still, it is my first day'],
+  suit: ['per my last email—', "let's circle back. TO YOUR FACE", "I haven't slept since Q2", 'this meeting could have been a punch', 'do you have a moment to SYNERGIZE'],
+  mime: ['…', '. . . !', '(gestures rudely)', '( is trapped. emotionally. )'],
+  pigeon: ['COO.', 'COO COO, AMIGO', '¡PALOMA POWER!', 'got any bread?'],
+  bouncer: ["you're not on the list", 'the list is just my name', 'no shirt, no shoes, NO MERCY'],
+  dj: ['MAKE SOME NOOOISE', 'this next one is called PAIN', 'wub wub wub', 'requests cost extra'],
+  gyozilla: ['YOU WANT FRIES WITH THAT BEATING?', '86 THE HERO!', "CHEF'S KISS… OF DEATH", 'WHO ORDERED THE KNUCKLE SANDWICH'],
+  goldfist: ['I OWN THIS ROOF. AND GRAVITY.', 'PUNCHING ME IS A PAID FEATURE', 'SYNERGY!!', 'MY LAWYERS ARE ALSO FISTS']
+};
 const STORY = ['THE GOLDFIST CORPORATION HAS TRADEMARKED THE WORD "FUN".', 'EVERY LAUGH NOW COSTS $4.99. HIGH-FIVES ARE A PREMIUM FEATURE.', 'THREE HEROES REFUSE TO READ THE TERMS AND CONDITIONS.'];
 const RANKS = [[3, 'NICE!', '#fff'], [6, 'SPICY!', '#ffd31a'], [10, 'RADICAL!!', '#ff9a1a'], [16, 'OUTRAGEOUS!!', '#ff4fa3'], [24, 'ILLEGAL!!!', '#ff2a2a'], [36, 'ANIME AS HECK!!!', '#b967ff']];
