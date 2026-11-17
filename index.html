@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>FINAL RAGE — Turbo Justice Edition</title>
+<style>
+  html,body{margin:0;height:100%;background:#07040d;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;background:#000;box-shadow:0 0 80px #ff2a6d33}
+  #touch{position:fixed;inset:0;display:none;pointer-events:none}
+  .tb{position:absolute;width:74px;height:74px;border-radius:50%;border:3px solid #fff9;color:#fff;font:900 italic 20px/74px Impact,"Arial Black",sans-serif;
+      text-align:center;pointer-events:auto;background:#ff2a6d55;backdrop-filter:blur(2px)}
+  .tb.on{background:#fff9;color:#111}
+  #bA{right:calc(96px + env(safe-area-inset-right));bottom:22px}
+  #bJ{right:calc(14px + env(safe-area-inset-right));bottom:74px;background:#05d9e855}
+  #bS{right:calc(76px + env(safe-area-inset-right));bottom:112px;background:#ffd31a66;width:60px;height:60px;line-height:60px;font-size:15px}
+  #bP{right:calc(14px + env(safe-area-inset-right));top:10px;width:38px;height:38px;line-height:38px;font-size:13px;background:#0006}
+  #stick{position:absolute;width:120px;height:120px;border-radius:50%;border:3px solid #fff5;display:none;transform:translate(-50%,-50%)}
+  #nub{position:absolute;width:52px;height:52px;border-radius:50%;background:#fff8;left:34px;top:34px}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="960" height="540"></canvas></div>
+<div id="touch">
+  <div id="stick"><div id="nub"></div></div>
+  <div class="tb" id="bA">HIT</div><div class="tb" id="bJ">JUMP</div><div class="tb" id="bS">RAGE</div><div class="tb" id="bP">II</div>
+</div>
+<script src="js/util.js"></script>
+<script src="js/rig.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/stage.js"></script>
+<script src="js/data.js"></script>
+<script src="js/fighter.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
