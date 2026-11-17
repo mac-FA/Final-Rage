@@ -158,6 +158,7 @@ const Sfx = {
       case 'dash': this.noise(0.2, 0.25, 1200, 300, 1.5); break;
       case 'break': this.noise(0.3, 0.6, 3000, 300, 0.4); this.tone('square', 300, 80, 0.15, 0.2); break;
       case 'pickup': [660, 880, 1320].forEach((f, i) => this.tone('square', f, f, 0.09, 0.14, i * 0.06)); break;
+      case 'fanfare': [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => { this.tone('square', f, f, i === 6 ? 0.5 : 0.11, 0.16, i * 0.1); this.tone('triangle', f / 2, f / 2, i === 6 ? 0.5 : 0.11, 0.2, i * 0.1); }); break;
       case 'select': this.tone('square', 520, 520, 0.05, 0.14); break;
       case 'ok': this.tone('square', 520, 1040, 0.16, 0.18); this.tone('sawtooth', 260, 780, 0.2, 0.12); break;
       case 'super': this.tone('sawtooth', 110, 1400, 0.7, 0.35); this.noise(0.7, 0.4, 200, 6000, 0.6); this.tone('square', 55, 220, 0.7, 0.3); break;

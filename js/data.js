@@ -13,6 +13,8 @@ const ANIMS = {
   land: { k: [['land', 0], ['land', 5], ['idle', 7]] },
   hurtA: { k: [['hurtA', 0]] }, hurtB: { k: [['hurtB', 0]] }, launched: { k: [['launched', 0]] }, lie: { k: [['lie', 0]] },
   getup: { k: [['lie', 0], ['getup', 9], ['idle', 9]] },
+  kipup: { k: [['lie', 0], ['kipA', 6, 'o'], ['kipB', 6, 'l'], ['land', 4, 'o'], ['idle', 5]] },
+  skid: { k: [['skid', 0], ['skid', 6], ['idle', 6]] },
   power: { k: [['power', 0]] }, winR: { k: [['winR', 0]] }, winH: { k: [['winH', 0]] }, winB: { k: [['winB', 0]] }, encore: { k: [['encore', 0]] }, point: { k: [['point', 0]] },
   uppW: { k: [['uppW', 0]] }, upper: { k: [['upper', 0]] }, splash: { k: [['splash', 0]] }, fallB: { k: [['hammerW', 0]] },
   rush: { loop: 1, k: [['jab', 0], ['cross', 3, 'o'], ['jab', 3, 'o']] }
@@ -23,17 +25,18 @@ const ANIMS = {
    lunge:[frame, vx]  hop:[frame, vy]  spin:[from,to,period]  ev:{frame:'event'}  air: ends on landing  trail: joint name */
 const MOVES = {
   // ----- Ryker -----
-  jab: { k: [['jabW', 2], ['jab', 2, 'b'], ['jab', 4], ['idle', 6]], cancel: 6, lunge: [1, 2.4], trail: 'hF', hits: [{ f: [3, 7], x: [0, 72], y: [50, 112], dmg: 5, kx: 1.2, stun: 20, stop: 3 }] },
+  jab: { k: [['jabW', 2], ['jab', 2, 'b'], ['jab', 4], ['jabW', 3], ['idle', 4]], cancel: 6, lunge: [1, 2.4], trail: 'hF', hits: [{ f: [3, 7], x: [0, 72], y: [50, 112], dmg: 5, kx: 1.2, stun: 20, stop: 3 }] },
   cross: { k: [['crossW', 2], ['cross', 2, 'b'], ['cross', 5], ['idle', 7]], cancel: 7, lunge: [1, 3.2], trail: 'hB', hits: [{ f: [3, 8], x: [0, 80], y: [50, 112], dmg: 7, kx: 1.8, stun: 22, stop: 4 }] },
-  hikick: { k: [['hikickW', 3], ['hikick', 2, 'b'], ['hikick', 6], ['idle', 8]], cancel: 9, lunge: [2, 2.8], trail: 'tF', hits: [{ f: [4, 10], x: [0, 92], y: [55, 135], dmg: 9, kx: 2.4, stun: 24, stop: 5 }] },
+  hikick: { k: [['hikickW', 3], ['hikick', 2, 'b'], ['hikick', 6], ['hikickW', 4], ['idle', 5]], cancel: 9, lunge: [2, 2.8], trail: 'tF', hits: [{ f: [4, 10], x: [0, 92], y: [55, 135], dmg: 9, kx: 2.4, stun: 24, stop: 5 }] },
   upper: { k: [['uppW', 5, 'o'], ['upper', 3, 'b'], ['upper', 10], ['fall', 6], ['idle', 5]], lunge: [4, 3.4], hop: [5, 6.2], trail: 'hF', hits: [{ f: [5, 13], x: [-5, 78], y: [10, 180], dmg: 16, kx: 3.4, ky: 11, stop: 10, heavy: 1 }] },
   knee: { k: [['knee', 3, 'b'], ['knee', 13], ['fall', 5], ['idle', 5]], lunge: [0, 8.5], hop: [0, 4.6], keep: 14, trail: 'kF', hits: [{ f: [1, 15], x: [0, 66], y: [20, 110], dmg: 12, kx: 4.5, ky: 7, stop: 7, heavy: 1 }] },
   divekick: { k: [['divekick', 3, 'b'], ['divekick', 90]], air: 1, dive: [6, -4], trail: 'tF', hits: [{ f: [2, 99], x: [0, 70], y: [-25, 70], dmg: 10, kx: 3.5, ky: 5.5, stop: 6 }] },
   tornado: { k: [['tornado', 3, 'b'], ['tornado', 28], ['fall', 5], ['idle', 4]], hop: [0, 5.2], spin: [2, 31, 3], ctrl: 2.4, inv: 1, trail: 'tF', hits: [{ f: [3, 31], x: [-80, 80], y: [15, 125], dmg: 5, kx: 3.6, ky: 7.5, stop: 2, multi: 8, both: 1 }] },
+  evade: { k: [['spinW', 3, 'o'], ['spinW', 7], ['idle', 5]], keep: 11, inv: 1, hits: [] },
   // ----- Hana -----
-  sidekick: { k: [['sidekickW', 2], ['sidekick', 2, 'b'], ['sidekick', 4], ['idleH', 5]], cancel: 6, lunge: [1, 2.6], trail: 'tF', hits: [{ f: [3, 7], x: [0, 90], y: [45, 110], dmg: 5, kx: 1.4, stun: 20, stop: 3 }] },
-  hikickH: { k: [['hikickW', 2], ['hikick', 2, 'b'], ['hikick', 5], ['idleH', 6]], cancel: 7, lunge: [1, 2.8], trail: 'tF', hits: [{ f: [3, 8], x: [0, 92], y: [55, 135], dmg: 6, kx: 1.8, stun: 22, stop: 4 }] },
-  spinkick: { k: [['spinW', 4], ['sidekick', 2, 'b'], ['sidekick', 6], ['idleH', 7]], cancel: 9, lunge: [2, 4], flip: [0, 4], trail: 'tF', hits: [{ f: [5, 11], x: [0, 98], y: [40, 120], dmg: 9, kx: 3, stun: 24, stop: 6 }] },
+  sidekick: { k: [['sidekickW', 2], ['sidekick', 2, 'b'], ['sidekick', 4], ['sidekickW', 3], ['idleH', 3]], cancel: 6, lunge: [1, 2.6], trail: 'tF', hits: [{ f: [3, 7], x: [0, 90], y: [45, 110], dmg: 5, kx: 1.4, stun: 20, stop: 3 }] },
+  hikickH: { k: [['hikickW', 2], ['hikick', 2, 'b'], ['hikick', 5], ['hikickW', 3], ['idleH', 4]], cancel: 7, lunge: [1, 2.8], trail: 'tF', hits: [{ f: [3, 8], x: [0, 92], y: [55, 135], dmg: 6, kx: 1.8, stun: 22, stop: 4 }] },
+  spinkick: { k: [['spinW', 4], ['sidekick', 2, 'b'], ['sidekick', 6], ['sidekickW', 3], ['idleH', 5]], cancel: 9, lunge: [2, 4], flip: [0, 4], trail: 'tF', hits: [{ f: [5, 11], x: [0, 98], y: [40, 120], dmg: 9, kx: 3, stun: 24, stop: 6 }] },
   axe: { k: [['axeW', 5, 'o'], ['axeW', 3], ['axe', 2, 'b'], ['axe', 8], ['idleH', 8]], lunge: [6, 3], trail: 'tF', ev: { 10: 'quakeS' }, hits: [{ f: [9, 14], x: [0, 86], y: [0, 170], dmg: 15, kx: 2.6, ky: 10, stop: 10, heavy: 1 }] },
   dropkick: { k: [['dropkick', 3, 'b'], ['dropkick', 13], ['fall', 5], ['idleH', 5]], lunge: [0, 10], hop: [0, 4.2], keep: 14, trail: 'tF', hits: [{ f: [1, 15], x: [0, 84], y: [25, 100], dmg: 12, kx: 5, ky: 7, stop: 7, heavy: 1 }] },
   split: { k: [['split', 5, 'b'], ['split', 30], ['idleH', 8]], spin: [4, 36, 3], ctrl: 2.8, inv: 1, trail: 'tF', hits: [{ f: [5, 36], x: [-84, 84], y: [30, 130], dmg: 4, kx: 3.2, ky: 7.5, stop: 2, multi: 6, both: 1 }] },
@@ -47,7 +50,7 @@ const MOVES = {
   lariat: { k: [['lariat', 4, 'b'], ['lariat', 36], ['idleB', 8]], spin: [3, 40, 4], ctrl: 1.7, inv: 1, trail: 'hF', hits: [{ f: [4, 40], x: [-96, 96], y: [40, 125], dmg: 7, kx: 4, ky: 8, stop: 3, multi: 10, both: 1 }] },
   // ----- enemies (long, readable wind-ups) -----
   ejab: { k: [['jabW', 13, 'o'], ['jab', 2, 'b'], ['jab', 6], ['idle', 12]], lunge: [12, 2.5], trail: 'hF', hits: [{ f: [14, 18], x: [0, 70], y: [50, 112], dmg: 6, kx: 1.5, stun: 16, stop: 4 }] },
-  ekick: { k: [['hikickW', 15, 'o'], ['hikick', 2, 'b'], ['hikick', 7], ['idle', 14]], lunge: [14, 2.5], trail: 'tF', hits: [{ f: [16, 21], x: [0, 90], y: [55, 135], dmg: 9, kx: 3, ky: 5, stop: 6 }] },
+  ekick: { k: [['hikickW', 15, 'o'], ['hikick', 2, 'b'], ['hikick', 7], ['hikickW', 5], ['idle', 10]], lunge: [14, 2.5], trail: 'tF', hits: [{ f: [16, 21], x: [0, 90], y: [55, 135], dmg: 9, kx: 3, ky: 5, stop: 6 }] },
   ecase: { k: [['hammerW', 17, 'o'], ['hammer', 3, 'b'], ['hammer', 9], ['idle', 16]], lunge: [16, 3], trail: 'hF', hits: [{ f: [18, 23], x: [0, 88], y: [0, 135], dmg: 11, kx: 2.6, ky: 5, stop: 7 }] },
   ehammer: { k: [['hammerW', 24, 'o'], ['hammer', 3, 'b'], ['hammer', 10], ['wall1', 18]], lunge: [23, 3], ev: { 26: 'quakeS' }, hits: [{ f: [25, 30], x: [0, 108], y: [0, 135], dmg: 13, kx: 3, ky: 6, stop: 8 }] },
   etackle: { k: [['uppW', 16, 'o'], ['shoulder', 3, 'b'], ['shoulder', 22], ['idle', 14]], lunge: [16, 7.6], keep: 38, hits: [{ f: [17, 39], x: [0, 60], y: [20, 120], dmg: 10, kx: 4.5, ky: 5.5, stop: 7 }] },

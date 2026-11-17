@@ -100,7 +100,7 @@ class Fighter {
         this.vx *= 0.8; this.vz = 0;
         if (--this.timer <= 0) {
           if (this.hp <= 0) { this.onGone(); }
-          else { this.state = 'getup'; this.anim = null; this.setAnim('getup', 0); this.timer = 18; this.inv = this.isPlayer ? 100 : 12; this.juggle = 0; }
+          else { this.state = 'getup'; this.anim = null; this.setAnim(this.isPlayer ? 'kipup' : 'getup', 0); this.timer = this.isPlayer ? 21 : 18; this.inv = this.isPlayer ? 100 : 12; this.juggle = 0; }
         }
         break;
       case 'getup': if (--this.timer <= 0) { this.state = 'idle'; this.setAnim(this.idleName, 4); } break;
@@ -221,7 +221,7 @@ class Fighter {
       if (dead) this.onDeath(att, h, dir);
     } else {
       this.state = 'hurt'; this.stun = und(h.stun, 18); this.vx = dir * und(h.kx, 1.5);
-      this.setAnim((this.hurtAlt ^= 1) ? 'hurtA' : 'hurtB', 2);
+      this.hurtAlt = (this.hurtAlt + 1) % 3; this.setAnim(['hurtA', 'hurtB', 'hurtC'][this.hurtAlt], 2);
     }
     return true;
   }
@@ -308,8 +308,17 @@ class Player extends Fighter {
     const I = Input, grounded = this.y <= 0 && this.state !== 'jump';
     const mx = (I.held.right ? 1 : 0) - (I.held.left ? 1 : 0), mz = (I.held.down ? 1 : 0) - (I.held.up ? 1 : 0);
     if (I.hit.left || I.hit.right) { const d = I.hit.right ? 1 : -1; if (this.tapDir === d && this.t - this.tapT < 16) { this.running = true; Sfx.play('dash'); dustPuff(this.x, this.gy, 5, 3); FX.add({ k: 'ring', x: this.x, y: this.gy - 56 * this.scale, size: 54, flat: 1.7, life: 11, w: 5 }); } this.tapDir = d; this.tapT = this.t; }
+    const wasRun = this.running;
     if (I.run && mx) this.running = true; if (!mx) this.running = false;
     if (G.auto) return;
+    if (grounded && (I.hit.up || I.hit.down)) { // double-tap up / down: sidestep, leaving afterimages
+      const d = I.hit.down ? 1 : -1;
+      if (this.tapZ === d && this.t - this.tapZT < 16) { this.tapZ = 0; this.startMove('evade'); this.vz = d * 5.2; this.vx = mx * 2; this.inv = 12; Sfx.play('dash'); dustPuff(this.x, this.gy, 4, 3); return; }
+      this.tapZ = d; this.tapZT = this.t;
+    }
+    if (wasRun && !this.running && grounded && this.state === 'run') { // slam on the brakes
+      this.state = 'land'; this.timer = 10; this.anim = null; this.setAnim('skid', 3); this.vx *= 1.5; dustPuff(this.x + this.facing * 16, this.gy, 6, 4); Sfx.play('land'); return;
+    }
     if (mx || mz || I.hit.atk || I.hit.jump || I.hit.spc || !grounded) this.idleT = 0;
     if (I.hit.spc && (this.rage >= 100 || grounded)) return this.special();
     if (grounded) {

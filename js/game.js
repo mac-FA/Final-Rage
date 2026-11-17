@@ -1,9 +1,9 @@
 'use strict';
 const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
 const Q = new URLSearchParams(location.search);
-let SCALE = 1;
+let SCALE = 1, QUALITY = 1; // QUALITY drops automatically on slow devices
 function resize() {
-  const ww = innerWidth, wh = innerHeight, s = Math.min(ww / W, wh / H), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const ww = innerWidth, wh = innerHeight, s = Math.min(ww / W, wh / H), dpr = Math.min(window.devicePixelRatio || 1, 2) * QUALITY;
   canvas.style.width = Math.floor(W * s) + 'px'; canvas.style.height = Math.floor(H * s) + 'px';
   canvas.width = Math.floor(W * s * dpr); canvas.height = Math.floor(H * s * dpr); SCALE = canvas.width / W;
 }
@@ -104,6 +104,7 @@ const G = {
         break;
       case 'clear': {
         this.world();
+        if (this.st < 170 && this.st % 3 === 0) FX.add({ k: 'bill', x: this.camX + rand(W), y: -10, vy: rand(1.5, 3), vx: rand(-1, 1), size: 8, col: pick(['#ff4fa3', '#ffd31a', '#05d9e8', '#7dff6b', '#fff']), life: 260, ph: rand(6), front: 1 });
         const p = this.player; if (p.y <= 0 && p.state !== 'win' && p.state !== 'super' && p.state !== 'attack') { p.state = 'win'; p.move = null; p.anim = null; p.setAnim(p.def.win, 8); }
         if (this.st > 330 || (this.st > 120 && Input.any())) { if (this.stageI + 1 < STAGE_DATA.length) this.startStage(this.stageI + 1); else { this.setState('ending'); FX.clear(); Music.start(TUNES.title); this.saveHi(); } }
         break;
@@ -139,7 +140,7 @@ const G = {
         if (bossDead) this.queue = [];
         if (!this.queue.length && !this.ents.length) {
           this.wave = null; this.waveI++;
-          if (this.waveI >= sd.waves.length) { this.setState('clear'); this.auto = true; this.banner('STAGE CLEAR!', '#7dff6b', 220, pick(['FUN LEVELS RISING', 'THAT WAS LEGALLY DISTINCT VIOLENCE', 'JUSTICE: SERVED HOT'])); Sfx.play('ok'); Sfx.play('pickup'); }
+          if (this.waveI >= sd.waves.length) { this.setState('clear'); this.auto = true; this.banner('STAGE CLEAR!', '#7dff6b', 220, pick(['FUN LEVELS RISING', 'THAT WAS LEGALLY DISTINCT VIOLENCE', 'JUSTICE: SERVED HOT'])); Sfx.play('fanfare'); }
           else { this.goT = 240; Sfx.play('ok'); }
         } else if (!this.ents.length && this.queue.length) this.waveT += 3; // nobody left: hurry the stragglers
       }
@@ -177,7 +178,7 @@ const G = {
     if (sh) ctx.translate(rand(-sh, sh) * 0.7, rand(-sh, sh) * 0.7);
     sc.draw(ctx, cam, t);
     const list = this.props.concat(this.ents, [p]).sort((a, b) => a.z - b.z);
-    if (sc.reflect) this.reflections(sc.reflect, cam, t);
+    if (sc.reflect && QUALITY > 0.4) this.reflections(sc.reflect, cam, t);
     if (sc.glow) sc.glow(ctx, cam, t);
     const sa = this.cutin ? 1 : this.superA;
     if (sa > 0.02) { ctx.fillStyle = `rgba(8,2,22,${sa * 0.78})`; ctx.fillRect(-60, -60, W + 120, H + 120); streakField(ctx, t, sa * 0.75, [p.def.col, p.def.col2, '#ffffff'], 46); }
@@ -294,6 +295,11 @@ const G = {
       const pop = 1 + Math.max(0, this.comboPop) * 0.5, x = W - 30, y = 120;
       let rk = null; for (const r of RANKS) if (this.combo >= r[0]) rk = r;
       const g = ['#fff', rk ? rk[2] : '#ffd31a'];
+      if (this.combo >= 10) { // the counter catches fire
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 8; i++) { const fx = x - 168 + i * 24, h = 22 + Math.min(this.combo, 40) * 0.6 + 16 * Math.abs(Math.sin(t * 0.3 + i * 1.7)), by = y + 36; ctx.fillStyle = `rgba(255,${110 + i * 14},30,0.42)`; ctx.beginPath(); ctx.moveTo(fx - 14, by); ctx.quadraticCurveTo(fx - 8, by - h * 0.6, fx + Math.sin(t * 0.23 + i) * 6, by - h * 1.7); ctx.quadraticCurveTo(fx + 9, by - h * 0.6, fx + 14, by); ctx.fill(); }
+        ctx.restore();
+      }
       txt(ctx, String(this.combo), x - 70, y, 62, g, { align: 'right', sc: pop, ol: 9, rot: -0.05 });
       txt(ctx, 'HITS!', x, y + 10, 24, '#fff', { align: 'right', ol: 5, rot: -0.05 });
       if (rk) txt(ctx, rk[1], x, y + 44, 22, rk[2], { align: 'right', ol: 5, rot: -0.05, sc: 1 + Math.max(0, this.comboPop) * 0.2 });
@@ -339,7 +345,7 @@ const G = {
   },
   controls(y) {
     const L = Input.isTouch ? ['LEFT STICK  move  (push far to DASH)', 'HIT  combo / dash attack / air attack — walk into a goon to GRAB, then HIT or JUMP to throw', 'JUMP  jump          RAGE  spin special — or SUPER when meter is full']
-      : ['ARROWS / WASD  move        double-tap ← →  DASH', 'J / Z  attack (mash for combo)        K / X / SPACE  jump', 'walk into a goon to GRAB — attack: knee   back+attack or jump: THROW', 'L / C  spin special (costs HP) — or SUPER when RAGE is full', 'ENTER  pause        M  mute        gamepads welcome'];
+      : ['ARROWS / WASD  move        double-tap ← →  DASH', 'J / Z  attack (mash for combo)        K / X / SPACE  jump', 'walk into a goon to GRAB — attack: knee   back+attack or jump: THROW', 'L / C  spin special (costs HP) — or SUPER when RAGE is full', 'double-tap ↑ ↓  sidestep dodge        ENTER  pause        M  mute'];
     L.forEach((s, i) => txt(ctx, s, W / 2, y + i * 26, 16, '#fff', { ol: 4, skew: 0 }));
   },
   drawStageCard() {
@@ -478,12 +484,15 @@ Music.cfg = TUNES.title;
 if (Q.get('hero')) G.heroI = +Q.get('hero') % 3;
 if (Q.get('play')) G.newGame();
 
-let last = performance.now(), acc = 0;
+let last = performance.now(), acc = 0, slow = 17, sinceQ = 0;
 function frame(now) {
-  acc += Math.min(100, now - last); last = now;
+  const dt = now - last; if (dt < 100) slow = slow * 0.96 + dt * 0.04; // smoothed frame interval
+  acc += Math.min(100, dt); last = now;
   let n = 0; while (acc >= 16.6 && n < 4) { G.step(); acc -= 16.667; n++; }
   if (n === 4) acc = 0;
   G.render();
+  // adaptive resolution: if frames keep arriving late (under ~40 fps), render fewer pixels
+  if (++sinceQ > 150 && slow > 25 && QUALITY > 0.34) { QUALITY = Math.max(0.34, QUALITY * 0.75); sinceQ = 0; slow = 17; resize(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

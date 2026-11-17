@@ -19,6 +19,7 @@ Open `index.html` in any modern browser (or serve the folder: `python3 -m http.s
 | --- | --- | --- | --- |
 | Move | Arrows / WASD | stick / d-pad | left-side virtual stick |
 | Dash | double-tap ← / → | — | push the stick far |
+| Sidestep dodge | double-tap ↑ / ↓ | — | — |
 | Attack (mash for a 4-hit combo) | J / Z | X / Y | HIT |
 | Jump (attack in the air too) | K / X / Space | A | JUMP |
 | Spin special (costs a little HP) / **SUPER** when RAGE is full | L / C | B / RB | RAGE |
